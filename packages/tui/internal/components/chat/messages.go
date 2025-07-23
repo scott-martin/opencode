@@ -557,6 +557,10 @@ func (m *messagesComponent) renderView() tea.Cmd {
 			hint += revertedStyle.Render(" (or /redo) to restore")
 
 			content += "\n" + hint
+			content = styles.NewStyle().
+				Background(t.BackgroundPanel()).
+				Width(width - 6).
+				Render(content)
 			content = renderContentBlock(
 				m.app,
 				content,
