@@ -35,14 +35,46 @@ Consider using one of the models we recommend.
 
 However, there are a only a few of them that are good at both generating code and tool calling.
 
-Here are the ones we recommend with opencode:
+### Model Compatibility Chart
 
-- Claude Sonnet 4
-- Claude Opus 4
-- Kimi K2
-- Qwen3 Coder
-- GPT 4.1
-- Gemini 2.5 Pro
+| Model               | Status                 | Intelligence | Cost       | Tool Calls | Context | Speed      | Best For                           |
+| ------------------- | ---------------------- | ------------ | ---------- | ---------- | ------- | ---------- | ---------------------------------- |
+| **Claude Sonnet 4** | ✅ Fully Supported     | 🧠🧠🧠🧠🧠   | 💰💰💰     | ⭐⭐⭐⭐⭐ | 200K    | ⚡⚡⚡⚡   | Complex reasoning, large codebases |
+| **Claude Opus 4**   | ✅ Fully Supported     | 🧠🧠🧠🧠🧠   | 💰💰💰💰💰 | ⭐⭐⭐⭐⭐ | 200K    | ⚡⚡⚡     | Most challenging tasks, research   |
+| **GPT 4.1**         | ✅ Fully Supported     | 🧠🧠🧠🧠     | 💰💰💰     | ⭐⭐⭐⭐   | 128K    | ⚡⚡⚡⚡   | General development, debugging     |
+| **Gemini 2.5 Pro**  | ✅ Fully Supported     | 🧠🧠🧠🧠     | 💰💰       | ⭐⭐⭐⭐   | 2M      | ⚡⚡⚡⚡   | Large files, multimodal tasks      |
+| **Kimi K2**         | ✅ Fully Supported     | 🧠🧠🧠       | 💰         | ⭐⭐⭐     | 200K    | ⚡⚡⚡⚡⚡ | Cost-effective, fast iteration     |
+| **Qwen3 Coder**     | ✅ Fully Supported     | 🧠🧠🧠🧠     | 💰         | ⭐⭐⭐⭐   | 32K     | ⚡⚡⚡⚡⚡ | Code generation, refactoring       |
+| **GPT-4o**          | ⚠️ Partially Supported | 🧠🧠🧠🧠     | 💰💰       | ⭐⭐⭐     | 128K    | ⚡⚡⚡⚡   | Multimodal, vision tasks           |
+| **Claude Haiku**    | ⚠️ Partially Supported | 🧠🧠         | 💰         | ⭐⭐       | 200K    | ⚡⚡⚡⚡⚡ | Simple tasks, quick responses      |
+| **Llama 3.3 70B**   | 🧪 Experimental        | 🧠🧠🧠       | Free\*     | ⭐⭐       | 128K    | ⚡⚡⚡     | Local deployment, privacy          |
+
+**Legend:**
+
+- **Status**: ✅ Fully Supported, ⚠️ Partially Supported, 🧪 Experimental
+- **Intelligence**: 🧠 (1-5 scale, relative capability)
+- **Cost**: 💰 (1-5 scale, relative pricing per token)
+- **Tool Calls**: ⭐ (1-5 scale, reliability rating)
+- **Context**: Maximum context window size
+- **Speed**: ⚡ (1-5 scale, response time)
+- \*Free when self-hosted
+
+### Known Limitations
+
+- **GPT-4o**: Occasional tool call formatting issues with complex multi-step tasks
+- **Claude Haiku**: Limited reasoning capability for complex architectural decisions
+- **Llama models**: Tool calling reliability varies by hosting provider
+- **Local models**: Performance depends heavily on hardware configuration
+
+### Usage Recommendations
+
+**For beginners**: Start with **Claude Sonnet 4** or **GPT 4.1** for the most reliable experience.
+
+**For cost optimization**: **Kimi K2** or **Qwen3 Coder** offer excellent value for routine development tasks.
+
+**For large codebases**: **Gemini 2.5 Pro** with its 2M context window can handle entire repositories.
+
+**For privacy-sensitive work**: Consider **Llama 3.3 70B** with local deployment.
 
 ---
 
