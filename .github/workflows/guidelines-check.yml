@@ -27,8 +27,13 @@ jobs:
         run: |
           opencode run -m anthropic/claude-sonnet-4-20250514 "A new pull request has been created: '${{ github.event.pull_request.title }}'
 
-          PR description:
+          <pr-number>
+          ${{ github.event.pull_request.number }}
+          </pr-number>
+
+          <pr-description>
           ${{ github.event.pull_request.body }}
+          </pr-description>
 
           Please check all the code changes in this pull request against the guidelines in AGENTS.md file in this repository.
 
