@@ -409,6 +409,7 @@ export namespace Session {
   ): Promise<{ info: MessageV2.Assistant; parts: MessageV2.Part[] }> {
     const l = log.clone().tag("session", input.sessionID)
     l.info("chatting")
+    const cfg = await Config.get()
 
     const inputAgent = input.agent ?? "build"
 
@@ -684,6 +685,7 @@ export namespace Session {
             ...ProviderTransform.options(input.providerID, small.info.id, input.sessionID),
           },
         },
+        abortSignal: cfg.timeout ? AbortSignal.timeout(cfg.timeout) : undefined,
         messages: [
           ...SystemPrompt.title(input.providerID).map(
             (x): ModelMessage => ({
@@ -898,6 +900,10 @@ export namespace Session {
         },
       },
     )
+    const signals = [abort.signal]
+    if (cfg.timeout) {
+      signals.push(AbortSignal.timeout(cfg.timeout))
+    }
     const stream = streamText({
       onError(e) {
         log.error("streamText error", {
@@ -970,7 +976,7 @@ export namespace Session {
       maxRetries: 3,
       activeTools: Object.keys(tools).filter((x) => x !== "invalid"),
       maxOutputTokens: outputLimit,
-      abortSignal: abort.signal,
+      abortSignal: AbortSignal.any(signals),
       stopWhen: async ({ steps }) => {
         if (steps.length >= 1000) {
           return true
@@ -1621,9 +1627,16 @@ export namespace Session {
     await updateMessage(next)
 
     const processor = createProcessor(next, model.info)
+
+    const cfg = await Config.get()
+    const signals = [abort.signal]
+    if (cfg.timeout) {
+      signals.push(AbortSignal.timeout(cfg.timeout))
+    }
+
     const stream = streamText({
       maxRetries: 10,
-      abortSignal: abort.signal,
+      abortSignal: AbortSignal.any(signals),
       model: model.language,
       messages: [
         ...system.map(

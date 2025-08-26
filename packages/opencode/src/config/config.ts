@@ -337,6 +337,7 @@ export namespace Config {
     .object({
       $schema: z.string().optional().describe("JSON schema reference for configuration validation"),
       theme: z.string().optional().describe("Theme name to use for the interface"),
+      timeout: z.number().optional().describe("Timeout for LLM requests (in milliseconds)"),
       keybinds: Keybinds.optional().describe("Custom keybind configurations"),
       tui: TUI.optional().describe("TUI specific settings"),
       command: z.record(z.string(), Command).optional(),
