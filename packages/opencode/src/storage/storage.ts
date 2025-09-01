@@ -29,6 +29,7 @@ export namespace Storage {
             if (worktree) break
           }
           if (!worktree) continue
+          if (!(await fs.exists(worktree))) continue
           const [id] = await $`git rev-list --max-parents=0 --all`
             .quiet()
             .nothrow()
