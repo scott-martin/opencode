@@ -425,6 +425,9 @@ export namespace Provider {
 
     // this will be adjusted when migration to opentui is complete,
     // for now we just read the tui state toml file directly
+    //
+    // NOTE: cannot just import file as toml without cleaning due to lack of
+    // support for date/time references in Bun toml parser: https://github.com/oven-sh/bun/issues/22426
     const lastused = await Bun.file(path.join(Global.Path.state, "tui"))
       .text()
       .then((text) => {
