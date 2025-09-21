@@ -91,7 +91,7 @@ if (!snapshot) {
 
   await $`gh release create v${version} --title "v${version}" --notes ${notes} ./packages/opencode/dist/*.zip`
 }
-if (snapshot) {
+if (snapshot && false) {
   await $`git checkout -b snapshot-${version}`
   await $`git commit --allow-empty -m "Snapshot release v${version}"`
   await $`git tag v${version}`

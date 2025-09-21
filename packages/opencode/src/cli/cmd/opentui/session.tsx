@@ -5,14 +5,13 @@ import { useRouteData } from "./context/route"
 import { useSync } from "./context/sync"
 import { SplitBorder } from "./component/border"
 import { Theme } from "./context/theme"
-import { BoxRenderable, hastToStyledText, RGBA, ScrollBoxRenderable, SyntaxStyle } from "@opentui/core"
+import { BoxRenderable, RGBA, ScrollBoxRenderable, SyntaxStyle } from "@opentui/core"
 import { Prompt } from "./component/prompt"
 import type { AssistantMessage, Part, ToolPart, UserMessage } from "@opencode-ai/sdk"
 import type { TextPart } from "ai"
 import { useLocal } from "./context/local"
 import { Locale } from "../../../util/locale"
 import type { Tool } from "../../../tool/tool"
-import { highlightHast, Language } from "tree-sitter-highlight"
 import type { ReadTool } from "../../../tool/read"
 import type { WriteTool } from "../../../tool/write"
 import { BashTool } from "../../../tool/bash"
@@ -298,6 +297,7 @@ ToolRegistry.register<typeof BashTool>({
   },
 })
 
+/*
 const syntax = new SyntaxStyle({
   keyword: { fg: RGBA.fromHex(Theme.syntaxKeyword), bold: true },
   string: { fg: RGBA.fromHex(Theme.syntaxString) },
@@ -311,6 +311,7 @@ const syntax = new SyntaxStyle({
   punctuation: { fg: RGBA.fromHex(Theme.syntaxPunctuation) },
   default: { fg: RGBA.fromHex(Theme.syntaxVariable) },
 })
+*/
 
 ToolRegistry.register<typeof ReadTool>({
   name: "read",
@@ -336,9 +337,7 @@ ToolRegistry.register<typeof WriteTool>({
     const code = createMemo(() => {
       if (!props.input.content) return ""
       const text = props.input.content
-      const hast = highlightHast(text, Language.TS)
-      const styled = hastToStyledText(hast as any, syntax)
-      return styled
+      return text
     })
 
     const numbers = createMemo(() => {
@@ -463,9 +462,7 @@ ToolRegistry.register<typeof EditTool>({
     const code = createMemo(() => {
       if (!props.metadata.diff) return ""
       const text = props.metadata.diff.split("\n").slice(5).join("\n")
-      const hast = highlightHast(text, Language.TS)
-      const styled = hastToStyledText(hast as any, syntax)
-      return styled
+      return text
     })
     return (
       <>
