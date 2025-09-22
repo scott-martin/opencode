@@ -123,6 +123,7 @@ function UserMessage(props: { message: UserMessage; parts: Part[] }) {
       backgroundColor={Theme.backgroundPanel}
       customBorderChars={SplitBorder.customBorderChars}
       borderColor={Theme.secondary}
+      flexShrink={0}
     >
       <text>{text()?.text}</text>
       <text>
