@@ -1,6 +1,6 @@
-import { RGBA } from "@opentui/core"
+import { RGBA, Timeline } from "@opentui/core"
 import { createComponentTimeline, useTimeline } from "@opentui/solid"
-import { createMemo } from "solid-js"
+import { createContext, createMemo, useContext, type ParentProps } from "solid-js"
 
 export type ShimmerProps = {
   text: string
@@ -9,17 +9,24 @@ export type ShimmerProps = {
 
 const DURATION = 2_500
 
-export function Shimmer(props: ShimmerProps) {
+const context = createContext<Timeline>()
+
+export function ShimmerProvider(props: ParentProps) {
   const timeline = createComponentTimeline({
     duration: DURATION,
     loop: true,
   })
+  return <context.Provider value={timeline}>{props.children}</context.Provider>
+}
+
+export function Shimmer(props: ShimmerProps) {
+  const timeline = useContext(context)
   const characters = props.text.split("")
   const color = createMemo(() => RGBA.fromHex(props.color))
 
   const animation = characters.map((_, i) =>
     useTimeline(
-      timeline,
+      timeline!,
       { shimmer: 0.4 },
       { shimmer: 1 },
       {
