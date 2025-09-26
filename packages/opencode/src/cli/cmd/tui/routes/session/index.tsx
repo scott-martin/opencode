@@ -7,7 +7,7 @@ import { SplitBorder } from "@tui/component/border"
 import { Theme } from "@tui/context/theme"
 import { BoxRenderable, ScrollBoxRenderable } from "@opentui/core"
 import { Prompt } from "@tui/component/prompt"
-import type { AssistantMessage, Part, ToolPart, UserMessage, TextPart } from "@opencode-ai/sdk"
+import type { AssistantMessage, Part, ToolPart, UserMessage, TextPart, ReasoningPart } from "@opencode-ai/sdk"
 import { useLocal } from "@tui/context/local"
 import { Locale } from "@/util/locale"
 import type { Tool } from "@/tool/tool"
@@ -248,14 +248,14 @@ function AssistantMessage(props: { message: AssistantMessage; parts: Part[]; las
           borderColor={Theme.backgroundElement}
         >
           <text fg={local.agent.color(props.message.mode)}>{Locale.titlecase(props.message.mode)}</text>
-          <Shimmer text={`${props.message.providerID}/${props.message.modelID}`} color={Theme.text} />
+          <Shimmer text={`${props.message.modelID}`} color={Theme.text} />
         </box>
       </Show>
       <Show when={props.message.time.completed && props.message.finish === "stop"}>
         <box paddingLeft={3}>
           <text marginTop={1}>
             <span style={{ fg: local.agent.color(props.message.mode) }}>{Locale.titlecase(props.message.mode)}</span>{" "}
-            <span style={{ fg: Theme.textMuted }}>{props.message.providerID + "/" + props.message.modelID}</span>
+            <span style={{ fg: Theme.textMuted }}>{props.message.modelID}</span>
           </text>
         </box>
       </Show>
@@ -266,7 +266,26 @@ function AssistantMessage(props: { message: AssistantMessage; parts: Part[]; las
 const PART_MAPPING = {
   text: TextPart,
   tool: ToolPart,
+  reasoning: ReasoningPart,
 }
+
+function ReasoningPart(props: { part: ReasoningPart; message: AssistantMessage }) {
+  return (
+    <box
+      id={"text-" + props.part.id}
+      marginTop={1}
+      flexShrink={0}
+      border={["left"]}
+      customBorderChars={SplitBorder.customBorderChars}
+      borderColor={Theme.backgroundPanel}
+    >
+      <box paddingTop={1} paddingBottom={1} paddingLeft={2} backgroundColor={Theme.backgroundPanel}>
+        <text>{props.part.text.trim()}</text>
+      </box>
+    </box>
+  )
+}
+
 function resize(el: BoxRenderable) {
   const parent = el.parent
   if (!parent) return
