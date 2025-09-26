@@ -77,11 +77,12 @@ export function init() {
       const parsed: Keybind.Info = {
         ctrl: evt.ctrl,
         name: evt.name,
-        shift: evt.shift,
+        shift: false,
         leader: store.leader,
         option: evt.option,
       }
       for (const key of keybind) {
+        console.log("compareing", key, parsed)
         if (Keybind.match(key, parsed)) {
           return true
         }
@@ -129,8 +130,8 @@ const DEFAULT_KEYBINDS: KeybindsConfig = {
   session_compact: "<leader>c",
   session_child_cycle: "ctrl+right",
   session_child_cycle_reverse: "ctrl+left",
-  messages_page_up: "pgup",
-  messages_page_down: "pgdown",
+  messages_page_up: "pageup",
+  messages_page_down: "pagedown",
   messages_half_page_up: "ctrl+alt+u",
   messages_half_page_down: "ctrl+alt+d",
   messages_first: "ctrl+g",
