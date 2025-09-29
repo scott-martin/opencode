@@ -1,6 +1,6 @@
 import "./index.css"
 import { Title } from "@solidjs/meta"
-import { Match, onCleanup, onMount, Show, Switch } from "solid-js"
+import { createMemo, Match, onCleanup, onMount, Show, Switch } from "solid-js"
 import logoLight from "../asset/logo-ornate-light.svg"
 import logoDark from "../asset/logo-ornate-dark.svg"
 import video from "../asset/lander/opencode-min.mp4"
@@ -31,8 +31,28 @@ const defaultWorkspace = query(async () => {
   }
 }, "defaultWorkspace")
 
+const githubStars = query(async () => {
+  "use server"
+  try {
+    const response = await fetch("https://api.github.com/repos/sst/opencode")
+    const json = await response.json()
+    return json.stargazers_count as number
+  } catch {}
+  return undefined
+}, "githubStars")
+
 export default function Home() {
   const workspace = createAsync(() => defaultWorkspace())
+  const stars = createAsync(() => githubStars())
+  const starCount = createMemo(() =>
+    stars()
+      ? new Intl.NumberFormat("en-US", {
+          notation: "compact",
+          compactDisplay: "short",
+        }).format(stars()!)
+      : "[25K]",
+  )
+
   const [store, setStore] = createStore({
     mobileMenuOpen: false,
   })
@@ -167,7 +187,7 @@ export default function Home() {
             <ul>
               <li>
                 <a href="https://github.com/sst/opencode" target="_blank">
-                  GitHub <span>[25K]</span>
+                  GitHub <span>[{starCount()}]</span>
                 </a>
               </li>
               <li>
@@ -233,7 +253,7 @@ export default function Home() {
                     </li>
                     <li>
                       <a href="https://github.com/sst/opencode" target="_blank">
-                        GitHub <span>[25K]</span>
+                        GitHub <span>[{starCount()}]</span>
                       </a>
                     </li>
                     <li>
@@ -866,7 +886,7 @@ export default function Home() {
           <footer data-component="footer">
             <div data-slot="cell">
               <a href="https://github.com/sst/opencode" target="_blank">
-                GitHub <span>[25K]</span>
+                GitHub <span>[{starCount()}]</span>
               </a>
             </div>
             <div data-slot="cell">
