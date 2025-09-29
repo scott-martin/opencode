@@ -266,7 +266,9 @@ export default function Home() {
                   </div>
 
                   <div data-slot="panels">
-                    <pre data-slot="panel" data-tab="curl"><code>curl -fsSL https://<strong>opencode.ai/install</strong> | bash</code></pre>
+                    <pre data-slot="panel" data-tab="curl"><span><span>curl -fsSL </span><span
+                      data-slot="protocol">https://</span><span
+                      data-slot="highlight">opencode.ai/install</span><span> | bash</span></span></pre>
                     <pre data-slot="panel" data-tab="npm" hidden><code>npm i -g opencode</code></pre>
                     <pre data-slot="panel" data-tab="bun" hidden><code>bun add -g opencode</code></pre>
                     <pre data-slot="panel" data-tab="brew" hidden><code>brew install opencode</code></pre>
