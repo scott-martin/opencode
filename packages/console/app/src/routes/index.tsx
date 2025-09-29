@@ -3,16 +3,10 @@ import { Title } from "@solidjs/meta"
 import { onCleanup, onMount } from "solid-js"
 import logoLight from "../asset/logo-ornate-light.svg"
 import logoDark from "../asset/logo-ornate-dark.svg"
-import zenLogoLight from "../asset/zen-ornate-light.svg"
-import zenLogoDark from "../asset/zen-ornate-dark.svg"
 import video from "../asset/lander/opencode-min.mp4"
 import videoPoster from "../asset/lander/opencode-poster.png"
 import dock from "../asset/lander/dock.png"
-import avatarDax from "../asset/lander/avatar-dax.png"
-import avatarJay from "../asset/lander/avatar-Jay.png"
-import avatarFrank from "../asset/lander/avatar-Frank.png"
-import avatarAdam from "../asset/lander/avatar-Adam.png"
-import avatarDavid from "../asset/lander/avatar-David.png"
+import { IconCopy, IconCheck } from "../component/icon"
 import { createAsync, query } from "@solidjs/router"
 import { getActor } from "~/context/auth"
 import { withActor } from "~/context/auth.withActor"
@@ -266,9 +260,17 @@ export default function Home() {
                   </div>
 
                   <div data-slot="panels">
-                    <pre data-slot="panel" data-tab="curl"><span><span>curl -fsSL </span><span
-                      data-slot="protocol">https://</span><span
-                      data-slot="highlight">opencode.ai/install</span><span> | bash</span></span></pre>
+                    <pre data-slot="panel" data-tab="curl">
+                      <button data-copy data-slot="command">
+                        <span>
+                          <span>curl -fsSL </span>
+                          <span data-slot="protocol">https://</span>
+                          <span data-slot="highlight">opencode.ai/install</span>
+                          <span> | bash</span>
+                        </span>
+                        <CopyStatus/>
+                      </button>
+                    </pre>
                     <pre data-slot="panel" data-tab="npm" hidden><code>npm i -g opencode</code></pre>
                     <pre data-slot="panel" data-tab="bun" hidden><code>bun add -g opencode</code></pre>
                     <pre data-slot="panel" data-tab="brew" hidden><code>brew install opencode</code></pre>
