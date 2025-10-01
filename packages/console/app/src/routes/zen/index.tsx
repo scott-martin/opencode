@@ -295,7 +295,7 @@ export default function Home() {
               <li>
                 <Faq question="Is Zen cheaper?">
                   Zen is not for profit. Zen passes through the costs from the model providers to you. The higher Zen’s
-                  usage the more OpenCode can negotiate better rates and pass those to users too.
+                  usage the more OpenCode can negotiate better rates and pass those to you.
                 </Faq>
               </li>
               <li>
