@@ -105,17 +105,28 @@ export function Autocomplete(props: {
   const agents = createMemo(() => {
     if (store.index !== 0) return []
     const agents = sync.data.agent
-    return agents.map(
-      (agent): AutocompleteOption => ({
-        display: "@" + agent.name,
-        onSelect: () => {
-          props.setPrompt((draft) => {
-            const append = "@" + agent.name + " "
-            draft.input = append
-          })
-        },
-      }),
-    )
+    return agents
+      .filter((agent) => !agent.builtIn && agent.mode !== "primary")
+      .map(
+        (agent): AutocompleteOption => ({
+          display: "@" + agent.name,
+          onSelect: () => {
+            props.setPrompt((draft) => {
+              const append = "@" + agent.name + " "
+              draft.input = append
+              draft.parts.push({
+                type: "agent",
+                source: {
+                  start: store.index,
+                  end: store.index + agent.name.length + 1,
+                  value: "@" + agent.name,
+                },
+                name: agent.name,
+              })
+            })
+          },
+        }),
+      )
   })
 
   const session = createMemo(() => (props.sessionID ? sync.session.get(props.sessionID) : undefined))
