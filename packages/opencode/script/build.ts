@@ -9,12 +9,6 @@ process.chdir(dir)
 
 import pkg from "../package.json"
 
-const GOARCH: Record<string, string> = {
-  arm64: "arm64",
-  x64: "amd64",
-  "x64-baseline": "amd64",
-}
-
 const targets = [
   ["windows", "x64"],
   ["linux", "arm64"],
@@ -33,9 +27,7 @@ for (const [os, arch] of targets) {
   console.log(`building ${os}-${arch}`)
   const name = `${pkg.name}-${os}-${arch}`
   await $`mkdir -p dist/${name}/bin`
-  await $`CGO_ENABLED=0 GOOS=${os} GOARCH=${GOARCH[arch]} go build -ldflags="-s -w -X main.Version=${version}" -o ../opencode/dist/${name}/bin/tui ../tui/cmd/opencode/main.go`.cwd(
-    "../tui",
-  )
+
   const opentui = `@opentui/core-${os === "windows" ? "win32" : os}-${arch.replace("-baseline", "")}`
   await $`mkdir -p ../../node_modules/${opentui}`
   await $`npm pack npm pack ${opentui}`.cwd(path.join(dir, "../../node_modules")).quiet()
