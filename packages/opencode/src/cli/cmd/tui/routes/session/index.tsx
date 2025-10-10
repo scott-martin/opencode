@@ -47,6 +47,7 @@ import { iife } from "@/util/iife"
 import { DialogConfirm } from "@tui/ui/dialog-confirm"
 import { DialogTimeline } from "./dialog-timeline"
 import { Sidebar } from "./sidebar"
+import { LANGUAGE_EXTENSIONS } from "@/lsp/language"
 
 const context = createContext<{
   width: number
@@ -965,6 +966,19 @@ ToolRegistry.register<typeof EditTool>({
       const text = props.metadata.diff.split("\n").slice(5).join("\n")
       return text.trim()
     })
+
+    const filetype = createMemo(() => {
+      if (!props.input.filePath) return "none"
+      const ext = path.extname(props.input.filePath)
+      const language = LANGUAGE_EXTENSIONS[ext]
+      if (["typescriptreact", "javascriptreact", "javascript"].includes(language)) return "typescript"
+      return language
+    })
+
+    createEffect(() => {
+      console.log(filetype())
+    })
+
     return (
       <>
         <ToolTitle icon="←" fallback="Preparing edit..." when={props.input.filePath}>
@@ -980,16 +994,16 @@ ToolRegistry.register<typeof EditTool>({
           <Match when={diff() && style() === "split"}>
             <box paddingLeft={1} flexDirection="row" gap={2}>
               <box flexGrow={1} flexBasis={0}>
-                <code filetype="typescript" syntaxStyle={syntaxTheme} content={diff()!.oldContent} />
+                <code filetype={filetype()} syntaxStyle={syntaxTheme} content={diff()!.oldContent} />
               </box>
               <box flexGrow={1} flexBasis={0}>
-                <code filetype="typescript" syntaxStyle={syntaxTheme} content={diff()!.newContent} />
+                <code filetype={filetype()} syntaxStyle={syntaxTheme} content={diff()!.newContent} />
               </box>
             </box>
           </Match>
           <Match when={code()}>
             <box paddingLeft={1}>
-              <code filetype="typescript" syntaxStyle={syntaxTheme} content={code()} />
+              <code filetype={filetype()} syntaxStyle={syntaxTheme} content={code()} />
             </box>
           </Match>
         </Switch>
