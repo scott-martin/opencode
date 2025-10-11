@@ -146,7 +146,7 @@ export namespace Config {
       {
         cwd: dir,
       },
-    )
+    ).catch(() => {})
   }
 
   const COMMAND_GLOB = new Bun.Glob("command/**/*.md")
