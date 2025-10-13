@@ -157,7 +157,6 @@ export function Prompt(props: PromptProps) {
         input: "",
         parts: [],
       })
-      return
     } else {
       sdk.session.prompt({
         path: {
