@@ -18,6 +18,7 @@ export function DialogModel() {
             const provider = sync.data.provider.find((x) => x.id === item.providerID)!
             if (!provider) return []
             const model = provider.models[item.modelID]
+            if (!model) return []
             return [
               {
                 key: item,
