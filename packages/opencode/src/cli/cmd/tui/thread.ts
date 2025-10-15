@@ -43,7 +43,6 @@ export const TuiThreadCommand = cmd({
       url: server.url,
       onExit: async () => {
         await client.call("shutdown", undefined)
-        worker.terminate()
       },
     })
   },
