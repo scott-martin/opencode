@@ -595,6 +595,12 @@ export type Todo = {
   id: string
 }
 
+export type FileDiff = {
+  file: string
+  left: string
+  right: string
+}
+
 export type UserMessage = {
   id: string
   sessionID: string
@@ -817,6 +823,7 @@ export type StepStartPart = {
   sessionID: string
   messageID: string
   type: "step-start"
+  snapshot?: string
 }
 
 export type StepFinishPart = {
@@ -824,6 +831,7 @@ export type StepFinishPart = {
   sessionID: string
   messageID: string
   type: "step-finish"
+  snapshot?: string
   cost: number
   tokens: {
     input: number
@@ -1821,6 +1829,27 @@ export type SessionShareResponses = {
 
 export type SessionShareResponse = SessionShareResponses[keyof SessionShareResponses]
 
+export type SessionDiffData = {
+  body?: never
+  path: {
+    id: string
+  }
+  query?: {
+    directory?: string
+    messageID?: string
+  }
+  url: "/session/{id}/diff"
+}
+
+export type SessionDiffResponses = {
+  /**
+   * Successfully retrieved diff
+   */
+  200: Array<FileDiff>
+}
+
+export type SessionDiffResponse = SessionDiffResponses[keyof SessionDiffResponses]
+
 export type SessionSummarizeData = {
   body?: {
     providerID: string
@@ -1910,6 +1939,10 @@ export type SessionPromptData = {
     system?: string
     tools?: {
       [key: string]: boolean
+    }
+    acpConnection?: {
+      connection: unknown
+      sessionId: string
     }
     parts: Array<TextPartInput | FilePartInput | AgentPartInput>
   }

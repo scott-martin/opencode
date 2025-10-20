@@ -33,7 +33,7 @@ test("tracks deleted files correctly", async () => {
 
       await $`rm ${tmp.path}/a.txt`.quiet()
 
-      expect((await Snapshot.patch(before!)).files).toContain(`a.txt`)
+      expect((await Snapshot.patch(before!)).files).toContain(`${tmp.path}/a.txt`)
     },
   })
 })
@@ -144,7 +144,7 @@ test("symlink handling", async () => {
 
       await $`ln -s ${tmp.path}/a.txt ${tmp.path}/link.txt`.quiet()
 
-      expect((await Snapshot.patch(before!)).files).toContain(`link.txt`)
+      expect((await Snapshot.patch(before!)).files).toContain(`${tmp.path}/link.txt`)
     },
   })
 })
@@ -159,7 +159,7 @@ test("large file handling", async () => {
 
       await Bun.write(`${tmp.path}/large.txt`, "x".repeat(1024 * 1024))
 
-      expect((await Snapshot.patch(before!)).files).toContain(`large.txt`)
+      expect((await Snapshot.patch(before!)).files).toContain(`${tmp.path}/large.txt`)
     },
   })
 })
@@ -581,6 +581,63 @@ test("revert preserves file that existed in snapshot when deleted then recreated
       expect(await Bun.file(`${tmp.path}/newfile.txt`).exists()).toBe(false)
       expect(await Bun.file(`${tmp.path}/existing.txt`).exists()).toBe(true)
       expect(await Bun.file(`${tmp.path}/existing.txt`).text()).toBe("original content")
+    },
+  })
+})
+
+test("diffFull function", async () => {
+  await using tmp = await bootstrap()
+  await Instance.provide({
+    directory: tmp.path,
+    fn: async () => {
+      const before = await Snapshot.track()
+      expect(before).toBeTruthy()
+
+      await Bun.write(`${tmp.path}/new.txt`, "new content")
+      await Bun.write(`${tmp.path}/b.txt`, "modified content")
+
+      const after = await Snapshot.track()
+      expect(after).toBeTruthy()
+
+      const diffs = await Snapshot.diffFull(before!, after!)
+      expect(diffs.length).toBe(2)
+
+      const newFileDiff = diffs.find((d) => d.file === "new.txt")
+      expect(newFileDiff).toBeDefined()
+      expect(newFileDiff!.left).toBe("")
+      expect(newFileDiff!.right).toBe("new content")
+
+      const modifiedFileDiff = diffs.find((d) => d.file === "b.txt")
+      expect(modifiedFileDiff).toBeDefined()
+      expect(modifiedFileDiff!.left).toBe(tmp.extra.bContent)
+      expect(modifiedFileDiff!.right).toBe("modified content")
+    },
+  })
+
+  await Instance.provide({
+    directory: tmp.path,
+    fn: async () => {
+      const before = await Snapshot.track()
+      expect(before).toBeTruthy()
+
+      await Bun.write(`${tmp.path}/added.txt`, "added content")
+      await $`rm ${tmp.path}/a.txt`.quiet()
+
+      const after = await Snapshot.track()
+      expect(after).toBeTruthy()
+
+      const diffs = await Snapshot.diffFull(before!, after!)
+      expect(diffs.length).toBe(2)
+
+      const addedFileDiff = diffs.find((d) => d.file === "added.txt")
+      expect(addedFileDiff).toBeDefined()
+      expect(addedFileDiff!.left).toBe("")
+      expect(addedFileDiff!.right).toBe("added content")
+
+      const removedFileDiff = diffs.find((d) => d.file === "a.txt")
+      expect(removedFileDiff).toBeDefined()
+      expect(removedFileDiff!.left).toBe(tmp.extra.aContent)
+      expect(removedFileDiff!.right).toBe("")
     },
   })
 })

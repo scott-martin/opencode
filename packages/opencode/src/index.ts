@@ -17,9 +17,14 @@ import { StatsCommand } from "./cli/cmd/stats"
 import { McpCommand } from "./cli/cmd/mcp"
 import { GithubCommand } from "./cli/cmd/github"
 import { ExportCommand } from "./cli/cmd/export"
+<<<<<<< HEAD
 import { AttachCommand } from "./cli/cmd/tui/attach"
 import { TuiThreadCommand } from "./cli/cmd/tui/thread"
 import { TuiSpawnCommand } from "./cli/cmd/tui/spawn"
+=======
+import { AttachCommand } from "./cli/cmd/attach"
+import { AcpCommand } from "./cli/cmd/acp"
+>>>>>>> dev
 
 const cancel = new AbortController()
 
@@ -68,6 +73,7 @@ const cli = yargs(hideBin(process.argv))
     })
   })
   .usage("\n" + UI.logo())
+  .command(AcpCommand)
   .command(McpCommand)
   .command(TuiThreadCommand)
   .command(TuiSpawnCommand)
