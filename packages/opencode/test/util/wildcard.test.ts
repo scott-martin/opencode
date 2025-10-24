@@ -45,8 +45,8 @@ test("allStructured prioritizes flag-specific patterns", () => {
 
 test("allStructured handles sed flags", () => {
   const rules = {
-    "sed -i*": "ask",
-    "sed -n *": "allow",
+    "sed * -i*": "ask",
+    "sed -n*": "allow",
   }
   expect(Wildcard.allStructured({ head: "sed", tail: ["-i", "file"] }, rules)).toBe("ask")
   expect(Wildcard.allStructured({ head: "sed", tail: ["-i.bak", "file"] }, rules)).toBe("ask")
