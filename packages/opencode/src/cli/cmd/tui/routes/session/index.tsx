@@ -36,6 +36,7 @@ import type { TaskTool } from "@/tool/task"
 import { useKeyboard, useTerminalDimensions, type BoxProps, type JSX } from "@opentui/solid"
 import { useSDK } from "@tui/context/sdk"
 import { useCommandDialog } from "@tui/component/dialog-command"
+import { Clipboard } from "@tui/util/clipboard"
 import { Shimmer } from "@tui/ui/shimmer"
 import { useKeybind } from "@tui/context/keybind"
 import { Header } from "./header"
@@ -173,12 +174,15 @@ export function Session() {
       keybind: "session_share",
       disabled: !!session()?.share?.url,
       category: "Session",
-      onSelect: (dialog) => {
-        sdk.client.session.share({
+      onSelect: async (dialog) => {
+        const result = await sdk.client.session.share({
           path: {
             id: route.sessionID,
           },
         })
+        if (result.data?.share?.url) {
+          await Clipboard.copy(result.data.share.url)
+        }
         dialog.clear()
       },
     },
