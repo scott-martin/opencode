@@ -11,7 +11,7 @@ import {
 } from "@opentui/core"
 import { createEffect, createMemo, Match, Switch, type JSX, onMount } from "solid-js"
 import { useLocal } from "@tui/context/local"
-import { Theme, syntaxTheme } from "@tui/context/theme"
+import { useTheme } from "@tui/context/theme"
 import { SplitBorder } from "@tui/component/border"
 import { useSDK } from "@tui/context/sdk"
 import { useRoute } from "@tui/context/route"
@@ -59,6 +59,7 @@ export function Prompt(props: PromptProps) {
   const history = usePromptHistory()
   const command = useCommandDialog()
   const renderer = useRenderer()
+  const { theme, syntaxTheme } = useTheme()
 
   const textareaKeybindings = createMemo(() => {
     const newlineBindings = keybind.all.input_newline || []
@@ -84,9 +85,9 @@ export function Prompt(props: PromptProps) {
     ]
   })
 
-  const fileStyleId = syntaxTheme.getStyleId("extmark.file")!
-  const agentStyleId = syntaxTheme.getStyleId("extmark.agent")!
-  const pasteStyleId = syntaxTheme.getStyleId("extmark.paste")!
+  const fileStyleId = syntaxTheme().getStyleId("extmark.file")!
+  const agentStyleId = syntaxTheme().getStyleId("extmark.agent")!
+  const pasteStyleId = syntaxTheme().getStyleId("extmark.paste")!
   let promptPartTypeId: number
 
   command.register(() => {
@@ -171,8 +172,8 @@ export function Prompt(props: PromptProps) {
   })
 
   createEffect(() => {
-    if (props.disabled) input.cursorColor = Theme.backgroundElement
-    if (!props.disabled) input.cursorColor = Theme.primary
+    if (props.disabled) input.cursorColor = theme.backgroundElement
+    if (!props.disabled) input.cursorColor = theme.primary
   })
 
   const [store, setStore] = createStore<{
@@ -475,35 +476,35 @@ export function Prompt(props: PromptProps) {
           flexDirection="row"
           {...SplitBorder}
           borderColor={
-            keybind.leader ? Theme.accent : store.mode === "shell" ? Theme.secondary : undefined
+            keybind.leader ? theme.accent : store.mode === "shell" ? theme.secondary : theme.border
           }
           justifyContent="space-evenly"
         >
           <box
-            backgroundColor={Theme.backgroundElement}
+            backgroundColor={theme.backgroundElement}
             width={3}
             height="100%"
             alignItems="center"
             paddingTop={1}
           >
-            <text attributes={TextAttributes.BOLD} fg={Theme.primary}>
+            <text attributes={TextAttributes.BOLD} fg={theme.primary}>
               {store.mode === "normal" ? ">" : "!"}
             </text>
           </box>
           <box
             paddingTop={1}
             paddingBottom={1}
-            backgroundColor={Theme.backgroundElement}
+            backgroundColor={theme.backgroundElement}
             flexGrow={1}
           >
             <textarea
               placeholder={
                 props.showPlaceholder
-                  ? t`${dim(fg(Theme.primary)("  → up/down"))} ${dim(fg("#64748b")("history"))} ${dim(fg("#a78bfa")("•"))} ${dim(fg(Theme.primary)(keybind.print("input_newline")))} ${dim(fg("#64748b")("newline"))} ${dim(fg("#a78bfa")("•"))} ${dim(fg(Theme.primary)(keybind.print("input_submit")))} ${dim(fg("#64748b")("submit"))}`
+                  ? t`${dim(fg(theme.primary)("  → up/down"))} ${dim(fg("#64748b")("history"))} ${dim(fg("#a78bfa")("•"))} ${dim(fg(theme.primary)(keybind.print("input_newline")))} ${dim(fg("#64748b")("newline"))} ${dim(fg("#a78bfa")("•"))} ${dim(fg(theme.primary)(keybind.print("input_submit")))} ${dim(fg("#64748b")("submit"))}`
                   : undefined
               }
-              textColor={Theme.text}
-              focusedTextColor={Theme.text}
+              textColor={theme.text}
+              focusedTextColor={theme.text}
               minHeight={1}
               maxHeight={6}
               onContentChange={() => {
@@ -659,13 +660,13 @@ export function Prompt(props: PromptProps) {
               }}
               ref={(r: TextareaRenderable) => (input = r)}
               onMouseDown={(r: MouseEvent) => r.target?.focus()}
-              focusedBackgroundColor={Theme.backgroundElement}
-              cursorColor={Theme.primary}
+              focusedBackgroundColor={theme.backgroundElement}
+              cursorColor={theme.primary}
               syntaxStyle={syntaxTheme}
             />
           </box>
           <box
-            backgroundColor={Theme.backgroundElement}
+            backgroundColor={theme.backgroundElement}
             width={1}
             justifyContent="center"
             alignItems="center"
@@ -673,24 +674,24 @@ export function Prompt(props: PromptProps) {
         </box>
         <box flexDirection="row" justifyContent="space-between">
           <text flexShrink={0} wrapMode="none">
-            <span style={{ fg: Theme.textMuted }}>{local.model.parsed().provider}</span>{" "}
+            <span style={{ fg: theme.textMuted }}>{local.model.parsed().provider}</span>{" "}
             <span style={{ bold: true }}>{local.model.parsed().model}</span>
           </text>
           <Switch>
             <Match when={status() === "compacting"}>
-              <text fg={Theme.textMuted}>compacting...</text>
+              <text fg={theme.textMuted}>compacting...</text>
             </Match>
             <Match when={status() === "working"}>
               <box flexDirection="row" gap={1}>
                 <text>
-                  esc <span style={{ fg: Theme.textMuted }}>interrupt</span>
+                  esc <span style={{ fg: theme.textMuted }}>interrupt</span>
                 </text>
               </box>
             </Match>
             <Match when={props.hint}>{props.hint!}</Match>
             <Match when={true}>
               <text>
-                ctrl+p <span style={{ fg: Theme.textMuted }}>commands</span>
+                ctrl+p <span style={{ fg: theme.textMuted }}>commands</span>
               </text>
             </Match>
           </Switch>

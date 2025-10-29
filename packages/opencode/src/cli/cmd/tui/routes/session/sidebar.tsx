@@ -1,12 +1,13 @@
 import { useSync } from "@tui/context/sync"
 import { createMemo, For, Show, Switch, Match } from "solid-js"
-import { Theme } from "../../context/theme"
+import { useTheme } from "../../context/theme"
 import { Locale } from "@/util/locale"
 import path from "path"
 import type { AssistantMessage } from "@opencode-ai/sdk"
 
 export function Sidebar(props: { sessionID: string }) {
   const sync = useSync()
+  const { theme } = useTheme()
   const session = createMemo(() => sync.session.get(props.sessionID)!)
   const todo = createMemo(() => sync.data.todo[props.sessionID] ?? [])
   const messages = createMemo(() => sync.data.message[props.sessionID] ?? [])
@@ -20,10 +21,16 @@ export function Sidebar(props: { sessionID: string }) {
   })
 
   const context = createMemo(() => {
-    const last = messages().findLast((x) => x.role === "assistant" && x.tokens.output > 0) as AssistantMessage
+    const last = messages().findLast(
+      (x) => x.role === "assistant" && x.tokens.output > 0,
+    ) as AssistantMessage
     if (!last) return
     const total =
-      last.tokens.input + last.tokens.output + last.tokens.reasoning + last.tokens.cache.read + last.tokens.cache.write
+      last.tokens.input +
+      last.tokens.output +
+      last.tokens.reasoning +
+      last.tokens.cache.read +
+      last.tokens.cache.write
     const model = sync.data.provider.find((x) => x.id === last.providerID)?.models[last.modelID]
     return {
       tokens: total.toLocaleString(),
@@ -39,16 +46,16 @@ export function Sidebar(props: { sessionID: string }) {
             <b>{session().title}</b>
           </text>
           <Show when={session().share?.url}>
-            <text fg={Theme.textMuted}>{session().share!.url}</text>
+            <text fg={theme.textMuted}>{session().share!.url}</text>
           </Show>
         </box>
         <box>
           <text>
             <b>Context</b>
           </text>
-          <text fg={Theme.textMuted}>{context()?.tokens ?? 0} tokens</text>
-          <text fg={Theme.textMuted}>{context()?.percentage ?? 0}% used</text>
-          <text fg={Theme.textMuted}>{cost()} spent</text>
+          <text fg={theme.textMuted}>{context()?.tokens ?? 0} tokens</text>
+          <text fg={theme.textMuted}>{context()?.percentage ?? 0}% used</text>
+          <text fg={theme.textMuted}>{cost()} spent</text>
         </box>
         <Show when={Object.keys(sync.data.mcp).length > 0}>
           <box>
@@ -62,9 +69,9 @@ export function Sidebar(props: { sessionID: string }) {
                     flexShrink={0}
                     style={{
                       fg: {
-                        connected: Theme.success,
-                        failed: Theme.error,
-                        disabled: Theme.textMuted,
+                        connected: theme.success,
+                        failed: theme.error,
+                        disabled: theme.textMuted,
                       }[item.status],
                     }}
                   >
@@ -72,10 +79,12 @@ export function Sidebar(props: { sessionID: string }) {
                   </text>
                   <text wrapMode="word">
                     {key}{" "}
-                    <span style={{ fg: Theme.textMuted }}>
+                    <span style={{ fg: theme.textMuted }}>
                       <Switch>
                         <Match when={item.status === "connected"}>Connected</Match>
-                        <Match when={item.status === "failed" && item}>{(val) => <i>{val().error}</i>}</Match>
+                        <Match when={item.status === "failed" && item}>
+                          {(val) => <i>{val().error}</i>}
+                        </Match>
                         <Match when={item.status === "disabled"}>Disabled in configuration</Match>
                       </Switch>
                     </span>
@@ -97,14 +106,14 @@ export function Sidebar(props: { sessionID: string }) {
                     flexShrink={0}
                     style={{
                       fg: {
-                        connected: Theme.success,
-                        error: Theme.error,
+                        connected: theme.success,
+                        error: theme.error,
                       }[item.status],
                     }}
                   >
                     •
                   </text>
-                  <text fg={Theme.textMuted}>
+                  <text fg={theme.textMuted}>
                     {item.id} {item.root}
                   </text>
                 </box>
@@ -127,15 +136,15 @@ export function Sidebar(props: { sessionID: string }) {
                 })
                 return (
                   <box flexDirection="row" gap={1} justifyContent="space-between">
-                    <text fg={Theme.textMuted} wrapMode="char">
+                    <text fg={theme.textMuted} wrapMode="char">
                       {file()}
                     </text>
                     <box flexDirection="row" gap={1} flexShrink={0}>
                       <Show when={item.additions}>
-                        <text fg={Theme.diffAdded}>+{item.additions}</text>
+                        <text fg={theme.diffAdded}>+{item.additions}</text>
                       </Show>
                       <Show when={item.deletions}>
-                        <text fg={Theme.diffRemoved}>-{item.deletions}</text>
+                        <text fg={theme.diffRemoved}>-{item.deletions}</text>
                       </Show>
                     </box>
                   </box>
@@ -151,7 +160,9 @@ export function Sidebar(props: { sessionID: string }) {
             </text>
             <For each={todo()}>
               {(todo) => (
-                <text style={{ fg: todo.status === "in_progress" ? Theme.success : Theme.textMuted }}>
+                <text
+                  style={{ fg: todo.status === "in_progress" ? theme.success : theme.textMuted }}
+                >
                   [{todo.status === "completed" ? "✓" : " "}] {todo.content}
                 </text>
               )}

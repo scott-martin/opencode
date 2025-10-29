@@ -1,6 +1,6 @@
 import { createContext, useContext, type ParentProps, Show } from "solid-js"
 import { createStore } from "solid-js/store"
-import { Theme } from "@tui/context/theme"
+import { useTheme } from "@tui/context/theme"
 import { SplitBorder } from "../component/border"
 
 export interface ToastOptions {
@@ -11,6 +11,7 @@ export interface ToastOptions {
 
 export function Toast() {
   const toast = useToast()
+  const { theme } = useTheme()
 
   return (
     <Show when={toast.currentToast}>
@@ -25,8 +26,8 @@ export function Toast() {
           paddingRight={2}
           paddingTop={1}
           paddingBottom={1}
-          backgroundColor={Theme.backgroundPanel}
-          borderColor={Theme[current().type]}
+          backgroundColor={theme.backgroundPanel}
+          borderColor={theme[current().type]}
           border={["left", "right"]}
           customBorderChars={SplitBorder.customBorderChars}
         >
@@ -65,11 +66,7 @@ const ctx = createContext<ToastContext>()
 
 export function ToastProvider(props: ParentProps) {
   const value = init()
-  return (
-    <ctx.Provider value={value}>
-      {props.children}
-    </ctx.Provider>
-  )
+  return <ctx.Provider value={value}>{props.children}</ctx.Provider>
 }
 
 export function useToast() {

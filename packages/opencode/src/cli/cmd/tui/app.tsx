@@ -2,7 +2,15 @@ import { render, useKeyboard, useRenderer, useTerminalDimensions } from "@opentu
 import { Clipboard } from "@tui/util/clipboard"
 import { TextAttributes } from "@opentui/core"
 import { RouteProvider, useRoute, type Route } from "@tui/context/route"
-import { Switch, Match, createEffect, untrack, ErrorBoundary, createMemo, createSignal } from "solid-js"
+import {
+  Switch,
+  Match,
+  createEffect,
+  untrack,
+  ErrorBoundary,
+  createMemo,
+  createSignal,
+} from "solid-js"
 import { Installation } from "@/installation"
 import { Global } from "@/global"
 import { DialogProvider, useDialog } from "@tui/ui/dialog"
@@ -11,11 +19,12 @@ import { SyncProvider, useSync } from "@tui/context/sync"
 import { LocalProvider, useLocal } from "@tui/context/local"
 import { DialogModel } from "@tui/component/dialog-model"
 import { DialogStatus } from "@tui/component/dialog-status"
+import { DialogThemeList } from "@tui/component/dialog-theme-list"
 import { CommandProvider, useCommandDialog } from "@tui/component/dialog-command"
 import { DialogAgent } from "@tui/component/dialog-agent"
 import { DialogSessionList } from "@tui/component/dialog-session-list"
 import { KeybindProvider } from "@tui/context/keybind"
-import { Theme } from "@tui/context/theme"
+import { ThemeProvider, useTheme } from "@tui/context/theme"
 import { Home } from "@tui/routes/home"
 import { Session } from "@tui/routes/session"
 import { PromptHistoryProvider } from "./component/prompt/history"
@@ -24,12 +33,18 @@ import { ToastProvider, useToast } from "./ui/toast"
 import { ExitProvider } from "./context/exit"
 import type { SessionRoute } from "./context/route"
 
-export async function tui(input: { url: string; sessionID?: string; model?: string; agent?: string; onExit?: () => Promise<void> }) {
+export async function tui(input: {
+  url: string
+  sessionID?: string
+  model?: string
+  agent?: string
+  onExit?: () => Promise<void>
+}) {
   const routeData: Route | undefined = input.sessionID
     ? {
-      type: "session",
-      sessionID: input.sessionID,
-    }
+        type: "session",
+        sessionID: input.sessionID,
+      }
     : undefined
   await render(
     () => {
@@ -40,17 +55,19 @@ export async function tui(input: { url: string; sessionID?: string; model?: stri
               <RouteProvider data={routeData}>
                 <SDKProvider url={input.url}>
                   <SyncProvider>
-                    <LocalProvider initialModel={input.model} initialAgent={input.agent}>
-                      <KeybindProvider>
-                        <DialogProvider>
-                          <CommandProvider>
-                            <PromptHistoryProvider>
-                              <App />
-                            </PromptHistoryProvider>
-                          </CommandProvider>
-                        </DialogProvider>
-                      </KeybindProvider>
-                    </LocalProvider>
+                    <ThemeProvider>
+                      <LocalProvider initialModel={input.model} initialAgent={input.agent}>
+                        <KeybindProvider>
+                          <DialogProvider>
+                            <CommandProvider>
+                              <PromptHistoryProvider>
+                                <App />
+                              </PromptHistoryProvider>
+                            </CommandProvider>
+                          </DialogProvider>
+                        </KeybindProvider>
+                      </LocalProvider>
+                    </ThemeProvider>
                   </SyncProvider>
                 </SDKProvider>
               </RouteProvider>
@@ -63,7 +80,6 @@ export async function tui(input: { url: string; sessionID?: string; model?: stri
       targetFps: 60,
       gatherStats: false,
       exitOnCtrlC: false,
-      useKittyKeyboard: true,
     },
   )
 }
@@ -80,6 +96,7 @@ function App() {
   const sync = useSync()
   const toast = useToast()
   const [sessionExists, setSessionExists] = createSignal(false)
+  const { theme } = useTheme()
 
   useKeyboard(async (evt) => {
     if (evt.meta && evt.name === "t") {
@@ -97,14 +114,13 @@ function App() {
   createEffect(async () => {
     if (route.data.type === "session") {
       const data = route.data as SessionRoute
-      await sync.session.sync(data.sessionID)
-        .catch(() => {
-          toast.show({
-            message: `Session not found: ${data.sessionID}`,
-            type: "error",
-          })
-          return route.navigate({ type: "home" })
+      await sync.session.sync(data.sessionID).catch(() => {
+        toast.show({
+          message: `Session not found: ${data.sessionID}`,
+          type: "error",
         })
+        return route.navigate({ type: "home" })
+      })
       setSessionExists(true)
     }
   })
@@ -182,6 +198,14 @@ function App() {
       },
       category: "System",
     },
+    {
+      title: "Switch theme",
+      value: "theme.switch",
+      onSelect: () => {
+        dialog.replace(() => <DialogThemeList />)
+      },
+      category: "System",
+    },
   ])
 
   createEffect(() => {
@@ -205,7 +229,7 @@ function App() {
     <box
       width={dimensions().width}
       height={dimensions().height}
-      backgroundColor={Theme.background}
+      backgroundColor={theme.background}
       onMouseUp={async () => {
         const text = renderer.getSelection()?.getSelectedText()
         if (text && text.length > 0) {
@@ -231,27 +255,36 @@ function App() {
       </box>
       <box
         height={1}
-        backgroundColor={Theme.backgroundPanel}
+        backgroundColor={theme.backgroundPanel}
         flexDirection="row"
         justifyContent="space-between"
         flexShrink={0}
       >
         <box flexDirection="row">
-          <box flexDirection="row" backgroundColor={Theme.backgroundElement} paddingLeft={1} paddingRight={1}>
-            <text fg={Theme.textMuted}>open</text>
+          <box
+            flexDirection="row"
+            backgroundColor={theme.backgroundElement}
+            paddingLeft={1}
+            paddingRight={1}
+          >
+            <text fg={theme.textMuted}>open</text>
             <text attributes={TextAttributes.BOLD}>code </text>
-            <text fg={Theme.textMuted}>v{Installation.VERSION}</text>
+            <text fg={theme.textMuted}>v{Installation.VERSION}</text>
           </box>
           <box paddingLeft={1} paddingRight={1}>
-            <text fg={Theme.textMuted}>{process.cwd().replace(Global.Path.home, "~")}</text>
+            <text fg={theme.textMuted}>{process.cwd().replace(Global.Path.home, "~")}</text>
           </box>
         </box>
         <box flexDirection="row" flexShrink={0}>
-          <text fg={Theme.textMuted} paddingRight={1}>
+          <text fg={theme.textMuted} paddingRight={1}>
             tab
           </text>
           <text fg={local.agent.color(local.agent.current().name)}>{""}</text>
-          <text bg={local.agent.color(local.agent.current().name)} fg={Theme.background} wrapMode="none">
+          <text
+            bg={local.agent.color(local.agent.current().name)}
+            fg={theme.background}
+            wrapMode="none"
+          >
             <span style={{ bold: true }}> {local.agent.current().name.toUpperCase()}</span>
             <span> AGENT </span>
           </text>

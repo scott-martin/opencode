@@ -1,5 +1,5 @@
 import { InputRenderable, RGBA, ScrollBoxRenderable, TextAttributes } from "@opentui/core"
-import { Theme } from "@tui/context/theme"
+import { useTheme } from "@tui/context/theme"
 import { entries, filter, flatMap, groupBy, pipe, take } from "remeda"
 import { batch, createEffect, createMemo, For, Show } from "solid-js"
 import { createStore } from "solid-js/store"
@@ -14,7 +14,7 @@ import { Locale } from "@/util/locale"
 export interface DialogSelectProps<T> {
   title: string
   options: DialogSelectOption<T>[]
-  ref?: (ref: DialogSelectRef) => void
+  ref?: (ref: DialogSelectRef<T>) => void
   onMove?: (option: DialogSelectOption<T>) => void
   onFilter?: (query: string) => void
   onSelect?: (option: DialogSelectOption<T>) => void
@@ -34,16 +34,18 @@ export interface DialogSelectOption<T = any> {
   footer?: string
   category?: string
   disabled?: boolean
-  bg?: string
+  bg?: RGBA
   onSelect?: (ctx: DialogContext) => void
 }
 
-export type DialogSelectRef = {
+export type DialogSelectRef<T> = {
   filter: string
+  filtered: DialogSelectOption<T>[]
 }
 
 export function DialogSelect<T>(props: DialogSelectProps<T>) {
   const dialog = useDialog()
+  const { theme } = useTheme()
   const [store, setStore] = createStore({
     selected: 0,
     filter: "",
@@ -139,9 +141,12 @@ export function DialogSelect<T>(props: DialogSelectProps<T>) {
   })
 
   let scroll: ScrollBoxRenderable
-  const ref: DialogSelectRef = {
+  const ref: DialogSelectRef<T> = {
     get filter() {
       return store.filter
+    },
+    get filtered() {
+      return filtered()
     },
   }
   props.ref?.(ref)
@@ -151,7 +156,7 @@ export function DialogSelect<T>(props: DialogSelectProps<T>) {
       <box paddingLeft={3} paddingRight={2}>
         <box flexDirection="row" justifyContent="space-between">
           <text attributes={TextAttributes.BOLD}>{props.title}</text>
-          <text fg={Theme.textMuted}>esc</text>
+          <text fg={theme.textMuted}>esc</text>
         </box>
         <box paddingTop={1} paddingBottom={1}>
           <input
@@ -161,9 +166,9 @@ export function DialogSelect<T>(props: DialogSelectProps<T>) {
                 props.onFilter?.(e)
               })
             }}
-            focusedBackgroundColor={Theme.backgroundPanel}
-            cursorColor={Theme.primary}
-            focusedTextColor={Theme.textMuted}
+            focusedBackgroundColor={theme.backgroundPanel}
+            cursorColor={theme.primary}
+            focusedTextColor={theme.textMuted}
             ref={(r) => {
               input = r
               input.focus()
@@ -184,7 +189,7 @@ export function DialogSelect<T>(props: DialogSelectProps<T>) {
             <>
               <Show when={category}>
                 <box paddingTop={index() > 0 ? 1 : 0} paddingLeft={1}>
-                  <text fg={Theme.accent} attributes={TextAttributes.BOLD}>
+                  <text fg={theme.accent} attributes={TextAttributes.BOLD}>
                     {category}
                   </text>
                 </box>
@@ -205,7 +210,7 @@ export function DialogSelect<T>(props: DialogSelectProps<T>) {
                         if (index === -1) return
                         moveTo(index)
                       }}
-                      backgroundColor={active() ? (option.bg ?? Theme.primary) : RGBA.fromInts(0, 0, 0, 0)}
+                      backgroundColor={active() ? (option.bg ?? theme.primary) : RGBA.fromInts(0, 0, 0, 0)}
                       paddingLeft={1}
                       paddingRight={1}
                       gap={1}
@@ -229,8 +234,8 @@ export function DialogSelect<T>(props: DialogSelectProps<T>) {
         <For each={props.keybind ?? []}>
           {(item) => (
             <text>
-              <span style={{ fg: Theme.text, attributes: TextAttributes.BOLD }}>{Keybind.toString(item.keybind)}</span>
-              <span style={{ fg: Theme.textMuted }}> {item.title}</span>
+              <span style={{ fg: theme.text, attributes: TextAttributes.BOLD }}>{Keybind.toString(item.keybind)}</span>
+              <span style={{ fg: theme.textMuted }}> {item.title}</span>
             </text>
           )}
         </For>
@@ -247,21 +252,22 @@ function Option(props: {
   footer?: string
   onMouseOver?: () => void
 }) {
+  const { theme } = useTheme()
   return (
     <>
       <text
         flexGrow={1}
-        fg={props.active ? Theme.background : props.current ? Theme.primary : Theme.text}
+        fg={props.active ? theme.background : props.current ? theme.primary : theme.text}
         attributes={props.active ? TextAttributes.BOLD : undefined}
         overflow="hidden"
         wrapMode="none"
       >
         {Locale.truncate(props.title, 62)}
-        <span style={{ fg: props.active ? Theme.background : Theme.textMuted }}> {props.description}</span>
+        <span style={{ fg: props.active ? theme.background : theme.textMuted }}> {props.description}</span>
       </text>
       <Show when={props.footer}>
         <box flexShrink={0}>
-          <text fg={props.active ? Theme.background : Theme.textMuted}>{props.footer}</text>
+          <text fg={props.active ? theme.background : theme.textMuted}>{props.footer}</text>
         </box>
       </Show>
     </>
