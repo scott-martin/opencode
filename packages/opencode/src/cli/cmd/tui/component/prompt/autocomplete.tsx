@@ -363,6 +363,7 @@ export function Autocomplete(props: {
       width={store.position.width}
       zIndex={100}
       {...SplitBorder}
+      borderColor={theme.border}
     >
       <box backgroundColor={theme.backgroundElement} height={height()}>
         <For
