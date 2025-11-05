@@ -953,10 +953,7 @@ function AssistantMessage(props: { message: AssistantMessage; parts: Part[]; las
         </box>
       </Show>
       <Show
-        when={
-          props.message.time.completed &&
-          props.parts.some((item) => item.type === "step-finish" && item.reason !== "tool-calls")
-        }
+        when={props.message.time.completed}
       >
         <box paddingLeft={3}>
           <text marginTop={1}>
