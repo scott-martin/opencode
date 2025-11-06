@@ -27,6 +27,7 @@ import { ExitProvider, useExit } from "./context/exit"
 import { Session as SessionApi } from "@/session"
 import { TuiEvent } from "./event"
 import { KVProvider, useKV } from "./context/kv"
+import { Terminal } from "./util/terminal"
 
 async function getTerminalBackgroundColor(): Promise<"dark" | "light"> {
   // can't set raw mode if not a TTY
@@ -99,6 +100,7 @@ export function tui(input: {
   // promise to prevent immediate exit
   return new Promise<void>(async (resolve) => {
     const mode = await getTerminalBackgroundColor()
+    const colors = await Terminal.colors()
 
     const routeData: Route | undefined = input.sessionID
       ? {
@@ -126,7 +128,7 @@ export function tui(input: {
                   <RouteProvider data={routeData}>
                     <SDKProvider url={input.url}>
                       <SyncProvider>
-                        <ThemeProvider mode={mode}>
+                        <ThemeProvider mode={mode} system={colors}>
                           <LocalProvider
                             initialModel={input.model}
                             initialAgent={input.agent}

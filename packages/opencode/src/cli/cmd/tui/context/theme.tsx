@@ -26,6 +26,7 @@ import tokyonight from "./theme/tokyonight.json" with { type: "json" }
 import vesper from "./theme/vesper.json" with { type: "json" }
 import zenburn from "./theme/zenburn.json" with { type: "json" }
 import { useKV } from "./kv"
+import type { Terminal } from "../util/terminal"
 
 type Theme = {
   primary: RGBA
@@ -86,14 +87,14 @@ type Variant = {
   dark: HexColor | RefName
   light: HexColor | RefName
 }
-type ColorValue = HexColor | RefName | Variant
+type ColorValue = HexColor | RefName | Variant | RGBA
 type ThemeJson = {
   $schema?: string
   defs?: Record<string, HexColor | RefName>
   theme: Record<keyof Theme, ColorValue>
 }
 
-export const THEMES: Record<string, ThemeJson> = {
+export const DEFAULT_THEMES: Record<string, ThemeJson> = {
   aura,
   ayu,
   catppuccin,
@@ -122,6 +123,7 @@ export const THEMES: Record<string, ThemeJson> = {
 function resolveTheme(theme: ThemeJson, mode: "dark" | "light") {
   const defs = theme.defs ?? {}
   function resolveColor(c: ColorValue): RGBA {
+    if (c instanceof RGBA) return c
     if (typeof c === "string") return c.startsWith("#") ? RGBA.fromHex(c) : resolveColor(defs[c])
     return resolveColor(c[mode])
   }
@@ -134,15 +136,21 @@ function resolveTheme(theme: ThemeJson, mode: "dark" | "light") {
 
 export const { use: useTheme, provider: ThemeProvider } = createSimpleContext({
   name: "Theme",
-  init: (props: { mode: "dark" | "light" }) => {
+  init: (props: { mode: "dark" | "light"; system: Terminal.Colors }) => {
     const sync = useSync()
     const kv = useKV()
 
     const [theme, setTheme] = createSignal(sync.data.config.theme ?? kv.get("theme", "opencode"))
     const [mode, setMode] = createSignal(props.mode)
 
+    console.log(generateSystem(props.system, mode()))
+    const themes: Record<string, ThemeJson> = {
+      ...DEFAULT_THEMES,
+    }
+    if (props.system.colors[0]) themes.system = generateSystem(props.system, mode())
+
     const values = createMemo(() => {
-      return resolveTheme(THEMES[theme()] ?? THEMES.opencode, mode())
+      return resolveTheme(themes[theme()] ?? themes.opencode, mode())
     })
 
     const syntax = createMemo(() => {
@@ -656,13 +664,15 @@ export const { use: useTheme, provider: ThemeProvider } = createSimpleContext({
       get selected() {
         return theme()
       },
+      all() {
+        return themes
+      },
       syntax,
       mode,
       setMode(mode: "dark" | "light") {
         setMode(mode)
       },
       set(theme: string) {
-        if (!THEMES[theme]) return
         setTheme(theme)
         kv.set("theme", theme)
       },
@@ -672,3 +682,175 @@ export const { use: useTheme, provider: ThemeProvider } = createSimpleContext({
     }
   },
 })
+
+function generateSystem(colors: Terminal.Colors, mode: "dark" | "light"): ThemeJson {
+  const bg = colors.background ?? colors.colors[0]
+  const isDark = mode == "dark"
+
+  // Generate gray scale based on terminal background
+  const grays = generateGrayScale(bg, isDark)
+  const textMuted = generateMutedTextColor(bg, isDark)
+
+  // ANSI color references
+  const ansiColors = {
+    black: colors.colors[0],
+    red: colors.colors[1],
+    green: colors.colors[2],
+    yellow: colors.colors[3],
+    blue: colors.colors[4],
+    magenta: colors.colors[5],
+    cyan: colors.colors[6],
+    white: colors.colors[7],
+  }
+
+  return {
+    theme: {
+      // Primary colors using ANSI
+      primary: ansiColors.cyan,
+      secondary: ansiColors.magenta,
+      accent: ansiColors.cyan,
+
+      // Status colors using ANSI
+      error: ansiColors.red,
+      warning: ansiColors.yellow,
+      success: ansiColors.green,
+      info: ansiColors.cyan,
+
+      // Text colors
+      text: colors.foreground ?? ansiColors.white,
+      textMuted,
+
+      // Background colors
+      background: bg,
+      backgroundPanel: grays[2],
+      backgroundElement: grays[3],
+
+      // Border colors
+      borderSubtle: grays[6],
+      border: grays[7],
+      borderActive: grays[8],
+
+      // Diff colors
+      diffAdded: ansiColors.green,
+      diffRemoved: ansiColors.red,
+      diffContext: grays[7],
+      diffHunkHeader: grays[7],
+      diffHighlightAdded: ansiColors.green,
+      diffHighlightRemoved: ansiColors.red,
+      diffAddedBg: grays[2],
+      diffRemovedBg: grays[2],
+      diffContextBg: grays[1],
+      diffLineNumber: grays[6],
+      diffAddedLineNumberBg: grays[3],
+      diffRemovedLineNumberBg: grays[3],
+
+      // Markdown colors
+      markdownText: colors.foreground ?? ansiColors.white,
+      markdownHeading: colors.foreground ?? ansiColors.white,
+      markdownLink: ansiColors.blue,
+      markdownLinkText: ansiColors.cyan,
+      markdownCode: ansiColors.green,
+      markdownBlockQuote: ansiColors.yellow,
+      markdownEmph: ansiColors.yellow,
+      markdownStrong: colors.foreground ?? ansiColors.white,
+      markdownHorizontalRule: grays[7],
+      markdownListItem: ansiColors.blue,
+      markdownListEnumeration: ansiColors.cyan,
+      markdownImage: ansiColors.blue,
+      markdownImageText: ansiColors.cyan,
+      markdownCodeBlock: colors.foreground ?? ansiColors.white,
+
+      // Syntax colors
+      syntaxComment: textMuted,
+      syntaxKeyword: ansiColors.magenta,
+      syntaxFunction: ansiColors.blue,
+      syntaxVariable: colors.foreground ?? ansiColors.white,
+      syntaxString: ansiColors.green,
+      syntaxNumber: ansiColors.yellow,
+      syntaxType: ansiColors.cyan,
+      syntaxOperator: ansiColors.cyan,
+      syntaxPunctuation: colors.foreground ?? ansiColors.white,
+    },
+  }
+}
+
+function generateGrayScale(bg: RGBA, isDark: boolean): Record<number, RGBA> {
+  const grays: Record<number, RGBA> = {}
+
+  const bgR = bg.r
+  const bgG = bg.g
+  const bgB = bg.b
+
+  const luminance = 0.299 * bgR + 0.587 * bgG + 0.114 * bgB
+
+  for (let i = 1; i <= 12; i++) {
+    const factor = i / 12.0
+
+    let grayValue: number
+    let newR: number
+    let newG: number
+    let newB: number
+
+    if (isDark) {
+      if (luminance < 10) {
+        grayValue = Math.floor(factor * 0.4 * 255)
+        newR = grayValue
+        newG = grayValue
+        newB = grayValue
+      } else {
+        const newLum = luminance + (255 - luminance) * factor * 0.4
+        const ratio = newLum / luminance
+        newR = Math.min(bgR * ratio, 255)
+        newG = Math.min(bgG * ratio, 255)
+        newB = Math.min(bgB * ratio, 255)
+      }
+    } else {
+      if (luminance > 245) {
+        grayValue = Math.floor(255 - factor * 0.4 * 255)
+        newR = grayValue
+        newG = grayValue
+        newB = grayValue
+      } else {
+        const newLum = luminance * (1 - factor * 0.4)
+        const ratio = newLum / luminance
+        newR = Math.max(bgR * ratio, 0)
+        newG = Math.max(bgG * ratio, 0)
+        newB = Math.max(bgB * ratio, 0)
+      }
+    }
+
+    grays[i] = RGBA.fromInts(Math.floor(newR), Math.floor(newG), Math.floor(newB))
+  }
+
+  return grays
+}
+
+function generateMutedTextColor(bg: RGBA, isDark: boolean): RGBA {
+  const bgR = bg.r
+  const bgG = bg.g
+  const bgB = bg.b
+
+  const bgLum = 0.299 * bgR + 0.587 * bgG + 0.114 * bgB
+
+  let grayValue: number
+
+  if (isDark) {
+    if (bgLum < 10) {
+      // Very dark/black background
+      grayValue = 180 // #b4b4b4
+    } else {
+      // Scale up for lighter dark backgrounds
+      grayValue = Math.min(Math.floor(160 + bgLum * 0.3), 200)
+    }
+  } else {
+    if (bgLum > 245) {
+      // Very light/white background
+      grayValue = 75 // #4b4b4b
+    } else {
+      // Scale down for darker light backgrounds
+      grayValue = Math.max(Math.floor(100 - (255 - bgLum) * 0.2), 60)
+    }
+  }
+
+  return RGBA.fromInts(grayValue, grayValue, grayValue)
+}
