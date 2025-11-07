@@ -22,7 +22,6 @@ import { Log } from "../util/log"
 import { ACPSessionManager } from "./session"
 import type { ACPConfig } from "./types"
 import { Provider } from "../provider/provider"
-import { SessionPrompt } from "../session/prompt"
 import { Installation } from "@/installation"
 import { SessionLock } from "@/session/lock"
 import { Bus } from "@/bus"
@@ -37,18 +36,19 @@ import { MCP } from "@/mcp"
 import { Todo } from "@/session/todo"
 import { z } from "zod"
 import { LoadAPIKeyError } from "ai"
+import type { OpencodeClient } from "@opencode-ai/sdk"
 
 export namespace ACP {
   const log = Log.create({ service: "acp-agent" })
 
-  export async function init() {
-    const model = await defaultModel({})
+  export async function init({ sdk }: { sdk: OpencodeClient }) {
+    const model = await defaultModel({ sdk })
     return {
-      create: (connection: AgentSideConnection, config: ACPConfig) => {
-        if (!config.defaultModel) {
-          config.defaultModel = model
+      create: (connection: AgentSideConnection, fullConfig: ACPConfig) => {
+        if (!fullConfig.defaultModel) {
+          fullConfig.defaultModel = model
         }
-        return new Agent(connection, config)
+        return new Agent(connection, fullConfig)
       },
     }
   }
@@ -57,10 +57,12 @@ export namespace ACP {
     private sessionManager = new ACPSessionManager()
     private connection: AgentSideConnection
     private config: ACPConfig
+    private sdk: ACPConfig["sdk"]
 
-    constructor(connection: AgentSideConnection, config: ACPConfig = {}) {
+    constructor(connection: AgentSideConnection, config: ACPConfig) {
       this.connection = connection
       this.config = config
+      this.sdk = config.sdk
       this.setupEventSubscriptions()
     }
 
@@ -366,17 +368,36 @@ export namespace ACP {
     async newSession(params: NewSessionRequest) {
       try {
         const model = await defaultModel(this.config)
-        const session = await this.sessionManager.create(params.cwd, params.mcpServers, model)
 
-        log.info("creating_session", { mcpServers: params.mcpServers.length })
+        // Create session via SDK
+        const result = await this.sdk.session.create({
+          body: {
+            title: `ACP Session ${crypto.randomUUID()}`,
+          },
+          query: {
+            directory: params.cwd,
+          },
+        })
+
+        if (!result.data?.id) {
+          throw new Error("Failed to create session")
+        }
+
+        const sessionId = result.data.id
+
+        // Store ACP session state
+        await this.sessionManager.create(sessionId, params.cwd, params.mcpServers, model)
+
+        log.info("creating_session", { sessionId, mcpServers: params.mcpServers.length })
+
         const load = await this.loadSession({
           cwd: params.cwd,
           mcpServers: params.mcpServers,
-          sessionId: session.id,
+          sessionId,
         })
 
         return {
-          sessionId: session.id,
+          sessionId,
           models: load.models,
           modes: load.modes,
           _meta: {},
@@ -531,7 +552,10 @@ export namespace ACP {
       }
       const agent = acpSession.modeId ?? "build"
 
-      const parts: SessionPrompt.PromptInput["parts"] = []
+      const parts: Array<
+        | { type: "text"; text: string }
+        | { type: "file"; url: string; filename: string; mime: string }
+      > = []
       for (const part of params.prompt) {
         switch (part.type) {
           case "text":
@@ -545,12 +569,14 @@ export namespace ACP {
               parts.push({
                 type: "file",
                 url: `data:${part.mimeType};base64,${part.data}`,
+                filename: "image",
                 mime: part.mimeType,
               })
             } else if (part.uri && part.uri.startsWith("http:")) {
               parts.push({
                 type: "file",
                 url: part.uri,
+                filename: "image",
                 mime: part.mimeType,
               })
             }
@@ -581,7 +607,7 @@ export namespace ACP {
 
       const cmd = (() => {
         const text = parts
-          .filter((p) => p.type === "text")
+          .filter((p): p is { type: "text"; text: string } => p.type === "text")
           .map((p) => p.text)
           .join("")
           .trim()
@@ -598,26 +624,30 @@ export namespace ACP {
       }
 
       if (!cmd) {
-        await SessionPrompt.prompt({
-          sessionID,
-          model: {
-            providerID: model.providerID,
-            modelID: model.modelID,
+        await this.sdk.session.prompt({
+          path: { id: sessionID },
+          body: {
+            model: {
+              providerID: model.providerID,
+              modelID: model.modelID,
+            },
+            parts,
+            agent,
           },
-          parts,
-          agent,
         })
         return done
       }
 
       const command = await Command.get(cmd.name)
       if (command) {
-        await SessionPrompt.command({
-          sessionID,
-          command: command.name,
-          arguments: cmd.args,
-          model: model.providerID + "/" + model.modelID,
-          agent,
+        await this.sdk.session.command({
+          path: { id: sessionID },
+          body: {
+            command: command.name,
+            arguments: cmd.args,
+            model: model.providerID + "/" + model.modelID,
+            agent,
+          },
         })
         return done
       }
@@ -688,11 +718,14 @@ export namespace ACP {
   }
 
   async function defaultModel(config: ACPConfig) {
+    const sdk = config.sdk
     const configured = config.defaultModel
     if (configured) return configured
 
-    const model = await Config.get()
-      .then((cfg) => {
+    const model = await sdk.config
+      .get({ throwOnError: true })
+      .then((resp) => {
+        const cfg = resp.data
         if (!cfg.model) return undefined
         const parsed = Provider.parseModel(cfg.model)
         return {

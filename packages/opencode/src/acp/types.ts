@@ -1,8 +1,8 @@
 import type { McpServer } from "@agentclientprotocol/sdk"
+import type { OpencodeClient } from "@opencode-ai/sdk"
 
 export interface ACPSessionState {
   id: string
-  parentId?: string
   cwd: string
   mcpServers: McpServer[]
   createdAt: Date
@@ -14,6 +14,7 @@ export interface ACPSessionState {
 }
 
 export interface ACPConfig {
+  sdk: OpencodeClient
   defaultModel?: {
     providerID: string
     modelID: string
