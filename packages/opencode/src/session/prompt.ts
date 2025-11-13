@@ -31,14 +31,13 @@ import PROMPT_PLAN from "../session/prompt/plan.txt"
 import BUILD_SWITCH from "../session/prompt/build-switch.txt"
 import { ModelsDev } from "../provider/models"
 import { defer } from "../util/defer"
-import { mergeDeep, pipe } from "remeda"
+import { mapValues, mergeDeep, pipe } from "remeda"
 import { ToolRegistry } from "../tool/registry"
 import { Wildcard } from "../util/wildcard"
 import { MCP } from "../mcp"
 import { LSP } from "../lsp"
 import { ReadTool } from "../tool/read"
 import { ListTool } from "../tool/ls"
-import { TaskTool } from "../tool/task"
 import { FileTime } from "../file/time"
 import { Permission } from "../permission"
 import { Snapshot } from "../snapshot"
@@ -94,45 +93,33 @@ export namespace SessionPrompt {
 
   const state = Instance.state(
     () => {
-      const queued = new Map<
+      const data: Record<
         string,
         {
-          callback: (input: MessageV2.WithParts) => void
-        }[]
-      >()
-      const pending = new Set<Promise<void>>()
-      const status: Record<string, Status> = {}
-      const abort: Record<string, AbortController> = {}
-
-      const track = (promise: Promise<void>) => {
-        pending.add(promise)
-        promise.finally(() => pending.delete(promise))
-      }
-
-      return {
-        status,
-        abort,
-        queued,
-        pending,
-        track,
-      }
+          abort: AbortController
+          status: Status
+          callbacks: {
+            resolve(input: MessageV2.WithParts): void
+            reject(): void
+          }[]
+        }
+      > = {}
+      return data
     },
     async (current) => {
-      current.queued.clear()
-      await Promise.allSettled([...current.pending])
-      for (const item of Object.values(current.abort)) {
-        item.abort()
+      for (const item of Object.values(current)) {
+        item.abort.abort()
       }
     },
   )
 
   export function status() {
-    return state().status
+    return mapValues(state(), (item) => item.status)
   }
 
   export function getStatus(sessionID: string) {
     return (
-      state().status[sessionID] ?? {
+      state()[sessionID]?.status ?? {
         type: "idle",
       }
     )
@@ -142,16 +129,6 @@ export namespace SessionPrompt {
     const status = getStatus(sessionID)
     if (status?.type !== "idle") throw new Session.BusyError(sessionID)
   }
-
-  export const setStatus = fn(z.object({ sessionID: Identifier.schema("session"), status: Status }), (input) => {
-    Bus.publish(Event.Status, { sessionID: input.sessionID, status: input.status })
-    if (input.status.type === "idle") {
-      delete state().status[input.sessionID]
-      delete state().abort[input.sessionID]
-      return
-    }
-    state().status[input.sessionID] = input.status
-  })
 
   export const PromptInput = z.object({
     sessionID: Identifier.schema("session"),
@@ -266,36 +243,42 @@ export namespace SessionPrompt {
 
   function start(sessionID: string) {
     const s = state()
-    if (s.status[sessionID]) return
+    if (s[sessionID]) return
     const controller = new AbortController()
-    s.abort[sessionID] = controller
-    setStatus({ sessionID, status: { type: "busy" } })
+    s[sessionID] = {
+      abort: controller,
+      status: { type: "busy" },
+      callbacks: [],
+    }
+    Bus.publish(Event.Status, {
+      sessionID,
+      status: s[sessionID].status,
+    })
     return controller.signal
   }
 
   export function cancel(sessionID: string) {
     const s = state()
-    const signal = s.abort[sessionID]
-    const status = s.status[sessionID]
-    if (signal) {
-      signal.abort()
-      delete s.abort[sessionID]
+    const match = s[sessionID]
+    if (!match) return
+    match.abort.abort()
+    for (const item of match.callbacks) {
+      item.reject()
     }
-    if (status) {
-      setStatus({ sessionID, status: { type: "idle" } })
-    }
+    delete s[sessionID]
+    Bus.publish(Event.Status, {
+      sessionID,
+      status: { type: "idle" },
+    })
     return
   }
 
   async function loop(sessionID: string) {
     const abort = start(sessionID)
     if (!abort) {
-      return new Promise<MessageV2.WithParts>((resolve) => {
-        const queue = state().queued.get(sessionID) ?? []
-        queue.push({
-          callback: resolve,
-        })
-        state().queued.set(sessionID, queue)
+      return new Promise<MessageV2.WithParts>((resolve, reject) => {
+        const callbacks = state()[sessionID].callbacks
+        callbacks.push({ resolve, reject })
       })
     }
 
@@ -472,20 +455,22 @@ export namespace SessionPrompt {
         retries++
         const delay = SessionRetry.getRetryDelayInMs(result.info.error, retries)
         if (!delay) break
-        setStatus({
+        state()[sessionID].status = {
+          type: "retry",
+          attempt: retries,
+          message: result.info.error.data.message,
+        }
+        Bus.publish(Event.Status, {
           sessionID,
-          status: {
-            type: "retry",
-            attempt: retries,
-            message: result.info.error.data.message,
-          },
+          status: state()[sessionID].status,
         })
         await SessionRetry.sleep(delay, abort).catch(() => {})
-        setStatus({
+        state()[sessionID].status = {
+          type: "busy",
+        }
+        Bus.publish(Event.Status, {
           sessionID,
-          status: {
-            type: "busy",
-          },
+          status: state()[sessionID].status,
         })
         continue
       }
@@ -495,11 +480,10 @@ export namespace SessionPrompt {
     SessionCompaction.prune({ sessionID })
     for await (const item of MessageV2.stream(sessionID)) {
       if (item.info.role === "user") continue
-      const queued = state().queued.get(sessionID) ?? []
+      const queued = state()[sessionID].callbacks
       for (const q of queued) {
-        q.callback(item)
+        q.resolve(item)
       }
-      state().queued.delete(sessionID)
       return item
     }
     throw new Error("Impossible")
@@ -511,7 +495,8 @@ export namespace SessionPrompt {
     model: ModelsDev.Model
     abort: AbortSignal
   }) {
-    const lastAssistant = input.msgs.findLast((msg) => msg.info.role === "assistant")?.info as MessageV2.Assistant
+    const lastAssistant = input.msgs.findLast((msg) => msg.info.role === "assistant" && msg.info.time.completed)
+      ?.info as MessageV2.Assistant
     if (!lastAssistant) return input.msgs
     if (
       !SessionCompaction.isOverflow({

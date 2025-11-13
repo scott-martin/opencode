@@ -83,7 +83,7 @@ export function Session() {
   const permissions = createMemo(() => sync.data.permission[route.sessionID] ?? [])
 
   const pending = createMemo(() => {
-    return messages().findLast((x) => x.role === "assistant")?.id
+    return messages().findLast((x) => x.role === "assistant" && !x.time.completed)?.id
   })
 
   const lastUserMessage = createMemo(() => {
