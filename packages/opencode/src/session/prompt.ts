@@ -209,7 +209,7 @@ export namespace SessionPrompt {
   async function loop(sessionID: string) {
     const abort = SessionStatus.start(sessionID)
     if (!abort) {
-      return new Promise((resolve) => {
+      return new Promise<MessageV2.WithParts>((resolve) => {
         const queue = state().queued.get(sessionID) ?? []
         queue.push({
           callback: resolve,
