@@ -115,7 +115,6 @@ export namespace SessionCompaction {
         cwd: Instance.directory,
         root: Instance.worktree,
       },
-      summary: true,
       cost: 0,
       tokens: {
         output: 0,
@@ -164,31 +163,6 @@ export namespace SessionCompaction {
       abort: input.abort,
     })
     const result = await processor.process(stream)
-    const userMessage = await Session.updateMessage({
-      id: Identifier.ascending("message"),
-      role: "user",
-      sessionID: input.sessionID,
-      time: {
-        created: Date.now(),
-      },
-      model: {
-        providerID: input.model.providerID,
-        modelID: input.model.modelID,
-      },
-      agent: "build",
-    })
-    await Session.updatePart({
-      type: "text",
-      sessionID: input.sessionID,
-      messageID: userMessage.id,
-      id: Identifier.ascending("part"),
-      text: "Use the above summary generated from your last session to resume from where you left off.",
-      time: {
-        start: Date.now(),
-        end: Date.now(),
-      },
-      synthetic: true,
-    })
     return result
   }
 

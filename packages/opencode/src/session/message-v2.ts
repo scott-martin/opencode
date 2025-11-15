@@ -142,6 +142,13 @@ export namespace MessageV2 {
   })
   export type AgentPart = z.infer<typeof AgentPart>
 
+  export const CompactionPart = PartBase.extend({
+    type: z.literal("compaction"),
+  }).meta({
+    ref: "CompactionPart",
+  })
+  export type CompactionPart = z.infer<typeof CompactionPart>
+
   export const RetryPart = PartBase.extend({
     type: z.literal("retry"),
     attempt: z.number(),
@@ -301,6 +308,7 @@ export namespace MessageV2 {
       PatchPart,
       AgentPart,
       RetryPart,
+      CompactionPart,
     ])
     .meta({
       ref: "Part",
@@ -563,6 +571,15 @@ export namespace MessageV2 {
                   filename: part.filename,
                 },
               ]
+
+            if (part.type === "compaction") {
+              return [
+                {
+                  type: "text",
+                  text: "The user requested a compaction of the session. YOU MUST CONTINUE THE CONVERSATION AFTER THIS MESSAGE.",
+                },
+              ]
+            }
             return []
           }),
         })
@@ -684,9 +701,17 @@ export namespace MessageV2 {
 
   export async function filterCompacted(stream: AsyncIterable<MessageV2.WithParts>) {
     const result = [] as MessageV2.WithParts[]
+    const completed = new Set<string>()
     for await (const msg of stream) {
       result.push(msg)
+      if (
+        msg.info.role === "user" &&
+        completed.has(msg.info.id) &&
+        msg.parts.some((part) => part.type === "compaction")
+      )
+        break
       if (msg.info.role === "assistant" && msg.info.summary === true) break
+      if (msg.info.role === "assistant" && msg.info.finish) completed.add(msg.info.id)
     }
     result.reverse()
     return result

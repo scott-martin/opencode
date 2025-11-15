@@ -286,26 +286,58 @@ export namespace SessionPrompt {
     let retries = 0
     while (true) {
       let msgs = await MessageV2.filterCompacted(MessageV2.stream(sessionID))
-      const lastUser = msgs.findLast((m) => m.info.role === "user")?.info as MessageV2.User
-      if (!lastUser) throw new Error("No user message found in stream. This should never happen.")
-      log.info("last user", { id: lastUser.id, model: lastUser.model })
 
-      const lastAssistant = msgs.findLast((msg) => msg.info.role === "assistant")?.info as MessageV2.Assistant
-      log.info("last assistant", { id: lastAssistant?.id })
+      let lastUser: MessageV2.User | undefined
+      let lastAssistant: MessageV2.Assistant | undefined
+      let lastFinished: MessageV2.Assistant | undefined
+      let tasks: MessageV2.CompactionPart[] = []
+      for (let i = msgs.length - 1; i >= 0; i--) {
+        const msg = msgs[i]
+        if (!lastUser && msg.info.role === "user") lastUser = msg.info as MessageV2.User
+        if (!lastAssistant && msg.info.role === "assistant") lastAssistant = msg.info as MessageV2.Assistant
+        if (msg.info.role === "assistant" && msg.info.finish) lastFinished = msg.info as MessageV2.Assistant
+        if (lastUser && lastFinished) break
+        const compaction = msg.parts.find((part) => part.type === "compaction")
+        if (compaction) {
+          tasks.push(compaction)
+        }
+      }
+
+      if (!lastUser) throw new Error("No user message found in stream. This should never happen.")
       if (lastAssistant?.finish && lastAssistant.finish !== "tool-calls" && lastUser.id < lastAssistant.id) break
+      log.info("last assistant", { id: lastAssistant?.id })
+
       step++
 
       const model = await Provider.getModel(lastUser.model.providerID, lastUser.model.modelID)
+      const task = tasks.pop()
+
+      if (
+        task?.type !== "compaction" &&
+        lastFinished &&
+        SessionCompaction.isOverflow({ tokens: lastFinished.tokens, model: model.info })
+      ) {
+        const msg = await Session.updateMessage({
+          id: Identifier.ascending("message"),
+          role: "user",
+          model: lastUser.model,
+          sessionID,
+          agent: lastUser.agent,
+          time: {
+            created: Date.now(),
+          },
+        })
+        await Session.updatePart({
+          id: Identifier.ascending("part"),
+          messageID: msg.id,
+          sessionID: msg.sessionID,
+          type: "compaction",
+        })
+        continue
+      }
 
       const result = await iife(async () => {
-        if (
-          await checkOverflow({
-            sessionID,
-            model: model.info,
-            abort,
-            msgs,
-          })
-        ) {
+        if (task?.type === "compaction") {
           return await SessionCompaction.process({
             messages: msgs,
             parentID: lastUser.id,
@@ -328,7 +360,7 @@ export namespace SessionPrompt {
             id: Identifier.ascending("message"),
             parentID: lastUser.id,
             role: "assistant",
-            mode: agent.mode,
+            mode: agent.name,
             path: {
               cwd: Instance.directory,
               root: Instance.worktree,

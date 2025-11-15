@@ -26,7 +26,15 @@ import {
   type ScrollAcceleration,
 } from "@opentui/core"
 import { Prompt, type PromptRef } from "@tui/component/prompt"
-import type { AssistantMessage, Part, ToolPart, UserMessage, TextPart, ReasoningPart } from "@opencode-ai/sdk"
+import type {
+  AssistantMessage,
+  Part,
+  ToolPart,
+  UserMessage,
+  TextPart,
+  ReasoningPart,
+  CompactionPart,
+} from "@opencode-ai/sdk"
 import { useLocal } from "@tui/context/local"
 import { Locale } from "@/util/locale"
 import type { Tool } from "@/tool/tool"
@@ -878,58 +886,71 @@ function UserMessage(props: {
   const queued = createMemo(() => props.pending && props.message.id > props.pending)
   const color = createMemo(() => (queued() ? theme.accent : theme.secondary))
 
+  const compaction = createMemo(() => props.parts.find((x) => x.type === "compaction"))
+
   return (
-    <Show when={text()}>
-      <box
-        id={props.message.id}
-        onMouseOver={() => {
-          setHover(true)
-        }}
-        onMouseOut={() => {
-          setHover(false)
-        }}
-        onMouseUp={props.onMouseUp}
-        border={["left"]}
-        paddingTop={1}
-        paddingBottom={1}
-        paddingLeft={2}
-        marginTop={props.index === 0 ? 0 : 1}
-        backgroundColor={hover() ? theme.backgroundElement : theme.backgroundPanel}
-        customBorderChars={SplitBorder.customBorderChars}
-        borderColor={color()}
-        flexShrink={0}
-      >
-        <text fg={theme.text}>{text()?.text}</text>
-        <Show when={files().length}>
-          <box flexDirection="row" paddingBottom={1} paddingTop={1} gap={1} flexWrap="wrap">
-            <For each={files()}>
-              {(file) => {
-                const bg = createMemo(() => {
-                  if (file.mime.startsWith("image/")) return theme.accent
-                  if (file.mime === "application/pdf") return theme.primary
-                  return theme.secondary
-                })
-                return (
-                  <text fg={theme.text}>
-                    <span style={{ bg: bg(), fg: theme.background }}> {MIME_BADGE[file.mime] ?? file.mime} </span>
-                    <span style={{ bg: theme.backgroundElement, fg: theme.textMuted }}> {file.filename} </span>
-                  </text>
-                )
-              }}
-            </For>
-          </box>
-        </Show>
-        <text fg={theme.text}>
-          {sync.data.config.username ?? "You"}{" "}
-          <Show
-            when={queued()}
-            fallback={<span style={{ fg: theme.textMuted }}>({Locale.time(props.message.time.created)})</span>}
-          >
-            <span style={{ bg: theme.accent, fg: theme.backgroundPanel, bold: true }}> QUEUED </span>
+    <>
+      <Show when={text()}>
+        <box
+          id={props.message.id}
+          onMouseOver={() => {
+            setHover(true)
+          }}
+          onMouseOut={() => {
+            setHover(false)
+          }}
+          onMouseUp={props.onMouseUp}
+          border={["left"]}
+          paddingTop={1}
+          paddingBottom={1}
+          paddingLeft={2}
+          marginTop={props.index === 0 ? 0 : 1}
+          backgroundColor={hover() ? theme.backgroundElement : theme.backgroundPanel}
+          customBorderChars={SplitBorder.customBorderChars}
+          borderColor={color()}
+          flexShrink={0}
+        >
+          <text fg={theme.text}>{text()?.text}</text>
+          <Show when={files().length}>
+            <box flexDirection="row" paddingBottom={1} paddingTop={1} gap={1} flexWrap="wrap">
+              <For each={files()}>
+                {(file) => {
+                  const bg = createMemo(() => {
+                    if (file.mime.startsWith("image/")) return theme.accent
+                    if (file.mime === "application/pdf") return theme.primary
+                    return theme.secondary
+                  })
+                  return (
+                    <text fg={theme.text}>
+                      <span style={{ bg: bg(), fg: theme.background }}> {MIME_BADGE[file.mime] ?? file.mime} </span>
+                      <span style={{ bg: theme.backgroundElement, fg: theme.textMuted }}> {file.filename} </span>
+                    </text>
+                  )
+                }}
+              </For>
+            </box>
           </Show>
-        </text>
-      </box>
-    </Show>
+          <text fg={theme.text}>
+            {sync.data.config.username ?? "You"}{" "}
+            <Show
+              when={queued()}
+              fallback={<span style={{ fg: theme.textMuted }}>({Locale.time(props.message.time.created)})</span>}
+            >
+              <span style={{ bg: theme.accent, fg: theme.backgroundPanel, bold: true }}> QUEUED </span>
+            </Show>
+          </text>
+        </box>
+      </Show>
+      <Show when={compaction()}>
+        <box
+          marginTop={1}
+          border={["top"]}
+          title=" Compaction "
+          titleAlignment="center"
+          borderColor={theme.borderActive}
+        />
+      </Show>
+    </>
   )
 }
 

@@ -358,6 +358,13 @@ export type RetryPart = {
   }
 }
 
+export type CompactionPart = {
+  id: string
+  sessionID: string
+  messageID: string
+  type: "compaction"
+}
+
 export type Part =
   | TextPart
   | ReasoningPart
@@ -369,6 +376,7 @@ export type Part =
   | PatchPart
   | AgentPart
   | RetryPart
+  | CompactionPart
 
 export type EventMessagePartUpdated = {
   type: "message.part.updated"
