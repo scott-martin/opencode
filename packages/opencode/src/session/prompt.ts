@@ -46,10 +46,9 @@ import { ConfigMarkdown } from "../config/markdown"
 import { SessionSummary } from "./summary"
 import { NamedError } from "@/util/error"
 import { fn } from "@/util/fn"
-import { SessionRetry } from "./retry"
 import { SessionProcessor } from "./processor"
-import { iife } from "@/util/iife"
 import { TaskTool } from "@/tool/task"
+import type { Message } from "vscode-jsonrpc"
 
 export namespace SessionPrompt {
   const log = Log.create({ service: "session.prompt" })
@@ -327,7 +326,7 @@ export namespace SessionPrompt {
       // pending subtask
       if (task?.type === "subtask") {
         const taskTool = await TaskTool.init()
-        const assistantMessage = await Session.updateMessage({
+        const assistantMessage: MessageV2.Assistant = await Session.updateMessage({
           id: Identifier.ascending("message"),
           role: "assistant",
           parentID: lastUser.id,
@@ -402,6 +401,14 @@ export namespace SessionPrompt {
             ...result,
           },
         } as any)
+        await Session.updateMessage({
+          ...assistantMessage,
+          role: "assistant",
+          time: {
+            ...assistantMessage.time,
+            completed: Date.now(),
+          },
+        })
         continue
       }
 
