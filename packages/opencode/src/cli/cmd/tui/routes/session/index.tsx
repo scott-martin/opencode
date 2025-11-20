@@ -894,7 +894,7 @@ function UserMessage(props: {
   const { theme } = useTheme()
   const [hover, setHover] = createSignal(false)
   const queued = createMemo(() => props.pending && props.message.id > props.pending)
-  const color = createMemo(() => (queued() ? theme.accent : theme.secondary))
+  const color = createMemo(() => (queued() ? theme.accent : theme.text))
 
   const compaction = createMemo(() => props.parts.find((x) => x.type === "compaction"))
 
@@ -1009,7 +1009,7 @@ function AssistantMessage(props: { message: AssistantMessage; parts: Part[]; las
         </box>
       </Show>
       <Switch>
-        <Match when={props.last && status().type !== "idle"}>
+        <Match when={props.last && status().type !== "idle" && false}>
           <box paddingLeft={3} flexDirection="row" gap={1} marginTop={1}>
             <text fg={local.agent.color(props.message.mode)}>{Locale.titlecase(props.message.mode)}</text>
             <Shimmer text={props.message.modelID} color={theme.text} />

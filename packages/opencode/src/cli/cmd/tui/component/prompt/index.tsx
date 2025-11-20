@@ -20,6 +20,7 @@ import type { FilePart } from "@opencode-ai/sdk"
 import { TuiEvent } from "../../event"
 import { iife } from "@/util/iife"
 import { Locale } from "@/util/locale"
+import { Shimmer } from "../../ui/shimmer"
 
 export type PromptProps = {
   sessionID?: string
@@ -829,6 +830,9 @@ export function Prompt(props: PromptProps) {
                     </Show>
                   )
                 })()}
+              </box>
+              <box flexShrink={0}>
+                <Shimmer text="x Working" color={theme.text} />
               </box>
               <text fg={store.interrupt > 0 ? theme.primary : theme.text}>
                 esc{" "}
