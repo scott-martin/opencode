@@ -118,7 +118,7 @@ export default function () {
                 </header>
                 <div class="@container select-text flex flex-col flex-1 min-h-0">
                   <div class="w-full flex-1 min-h-0 flex">
-                    <div class="relative shrink-0 px-12 pt-14 flex flex-col gap-10 flex-1 min-h-0 w-full max-w-xl mx-auto">
+                    <div class="relative shrink-0 px-21 pt-14 flex flex-col gap-10 flex-1 min-h-0 w-full max-w-xl mx-auto">
                       <div class="flex flex-col gap-4">
                         <div class="h-8 flex gap-2.5 items-center justify-start self-stretch">
                           <div class="pl-[2.5px] pr-2 flex items-center gap-1.75 bg-surface-strong shadow-xs-border-base">
