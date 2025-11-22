@@ -43,12 +43,24 @@ export namespace Share {
     const exists = await get(info.id)
     if (exists) throw new Errors.AlreadyExists(info.id)
     await Storage.write(["share", info.id], info)
+    console.log("created share", info.id)
     return info
   })
 
   async function get(sessionID: string) {
     return Storage.read<Info>(["share", sessionID])
   }
+
+  export const remove = fn(Info.pick({ id: true, secret: true }), async (body) => {
+    const share = await get(body.id)
+    if (!share) throw new Errors.NotFound(body.id)
+    if (share.secret !== body.secret) throw new Errors.InvalidSecret(body.id)
+    await Storage.remove(["share", body.id])
+    const list = await Storage.list(["share_data", body.id])
+    for (const item of list) {
+      await Storage.remove(item)
+    }
+  })
 
   export async function data(sessionID: string) {
     const list = await Storage.list(["share_data", sessionID])

@@ -1,6 +1,6 @@
 import type { APIEvent } from "@solidjs/start/server"
 import { Hono } from "hono"
-import { describeResponse, describeRoute, openAPIRouteHandler, resolver } from "hono-openapi"
+import { describeRoute, openAPIRouteHandler, resolver } from "hono-openapi"
 import { validator } from "hono-openapi"
 import z from "zod"
 import { cors } from "hono/cors"
@@ -51,10 +51,11 @@ app
     async (c) => {
       const body = c.req.valid("json")
       const share = await Share.create({ id: body.sessionID })
-      console.log(share)
+      const protocol = c.req.header("x-forwarded-proto") ?? c.req.header("x-forwarded-protocol") ?? "https"
+      const host = c.req.header("x-forwarded-host") ?? c.req.header("host")
       return c.json({
         secret: share.secret,
-        url: "/s/" + share.id,
+        url: `${protocol}://${host}/share/${share.id}`,
       })
     },
   )
@@ -106,6 +107,31 @@ app
     async (c) => {
       const { sessionID } = c.req.valid("param")
       return c.json(await Share.data(sessionID))
+    },
+  )
+  .delete(
+    "/share/:sessionID",
+    describeRoute({
+      description: "Remove a share",
+      operationId: "share.remove",
+      responses: {
+        200: {
+          description: "Success",
+          content: {
+            "application/json": {
+              schema: resolver(z.object({})),
+            },
+          },
+        },
+      },
+    }),
+    validator("param", z.object({ sessionID: z.string() })),
+    validator("json", z.object({ secret: z.string() })),
+    async (c) => {
+      const { sessionID } = c.req.valid("param")
+      const body = c.req.valid("json")
+      await Share.remove({ id: sessionID, secret: body.secret })
+      return c.json({})
     },
   )
 

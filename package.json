@@ -9,7 +9,8 @@
     "dev": "bun run --cwd packages/opencode --conditions=browser src/index.ts",
     "typecheck": "bun turbo typecheck",
     "prepare": "husky",
-    "random": "echo 'Random script'"
+    "random": "echo 'Random script'",
+    "hello": "echo 'Hello World!'"
   },
   "workspaces": {
     "packages": [
