@@ -30,6 +30,7 @@ import { TuiEvent } from "./event"
 import { KVProvider, useKV } from "./context/kv"
 import { Provider } from "@/provider/provider"
 import { ArgsProvider, useArgs, type Args } from "./context/args"
+import { PromptRefProvider, usePromptRef } from "./context/prompt"
 
 async function getTerminalBackgroundColor(): Promise<"dark" | "light"> {
   // can't set raw mode if not a TTY
@@ -117,7 +118,9 @@ export function tui(input: { url: string; args: Args; onExit?: () => Promise<voi
                                 <DialogProvider>
                                   <CommandProvider>
                                     <PromptHistoryProvider>
-                                      <App />
+                                      <PromptRefProvider>
+                                        <App />
+                                      </PromptRefProvider>
                                     </PromptHistoryProvider>
                                   </CommandProvider>
                                 </DialogProvider>
@@ -158,6 +161,7 @@ function App() {
   const { theme, mode, setMode } = useTheme()
   const sync = useSync()
   const exit = useExit()
+  const promptRef = usePromptRef()
 
   createEffect(() => {
     console.log(JSON.stringify(route.data))
@@ -212,8 +216,11 @@ function App() {
       keybind: "session_new",
       category: "Session",
       onSelect: () => {
+        const current = promptRef.current
+        const currentPrompt = current && current.focused ? current.current : undefined
         route.navigate({
           type: "home",
+          initialPrompt: currentPrompt,
         })
         dialog.clear()
       },
