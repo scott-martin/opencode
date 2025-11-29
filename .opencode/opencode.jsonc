@@ -33,11 +33,9 @@
             "npm": "@ai-sdk/openai",
           },
           "options": {
-            "reasoning": {
-              "effort": "medium",
-              "summary": "detailed",
-            },
-            "include": ["reasoning.encrypted_content"],
+            // "reasoningEffort": "low",
+            // "reasoningSummary": "auto",
+            // "include": ["reasoning.encrypted_content"],
           },
         },
         "gpt-5-codex": {
