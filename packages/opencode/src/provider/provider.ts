@@ -23,7 +23,7 @@ import { createVertexAnthropic } from "@ai-sdk/google-vertex/anthropic"
 import { createOpenAI } from "@ai-sdk/openai"
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible"
 import { createOpenRouter } from "@openrouter/ai-sdk-provider"
-import { createGitHubCopilotOpenAICompatible } from "./sdk/copilot/src"
+import { createOpenaiCompatible as createGitHubCopilotOpenAICompatible } from "./sdk/openai-compatible/src"
 
 export namespace Provider {
   const log = Log.create({ service: "provider" })

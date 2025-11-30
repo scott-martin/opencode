@@ -1,20 +1,21 @@
-import type { EmbeddingModelV2, ImageModelV2, LanguageModelV2 } from "@ai-sdk/provider"
+import type { LanguageModelV2 } from "@ai-sdk/provider"
 import { OpenAICompatibleChatLanguageModel } from "@ai-sdk/openai-compatible"
 import { type FetchFunction, withoutTrailingSlash, withUserAgentSuffix } from "@ai-sdk/provider-utils"
-import { type GitHubCopilotModelId } from "./github-copilot-chat-settings"
 import { OpenAIResponsesLanguageModel } from "./responses/openai-responses-language-model"
 
 // Import the version or define it
 const VERSION = "0.1.0"
 
-export interface GitHubCopilotProviderSettings {
+export type OpenaiCompatibleModelId = string
+
+export interface OpenaiCompatibleProviderSettings {
   /**
    * API key for authenticating requests.
    */
   apiKey?: string
 
   /**
-   * Base URL for the GitHub Copilot API calls.
+   * Base URL for the OpenAI Compatible API calls.
    */
   baseURL?: string
 
@@ -34,11 +35,11 @@ export interface GitHubCopilotProviderSettings {
   fetch?: FetchFunction
 }
 
-export interface GitHubCopilotProvider {
-  (modelId: GitHubCopilotModelId): LanguageModelV2
-  chat(modelId: GitHubCopilotModelId): LanguageModelV2
-  responses(modelId: GitHubCopilotModelId): LanguageModelV2
-  languageModel(modelId: GitHubCopilotModelId): LanguageModelV2
+export interface OpenaiCompatibleProvider {
+  (modelId: OpenaiCompatibleModelId): LanguageModelV2
+  chat(modelId: OpenaiCompatibleModelId): LanguageModelV2
+  responses(modelId: OpenaiCompatibleModelId): LanguageModelV2
+  languageModel(modelId: OpenaiCompatibleModelId): LanguageModelV2
 
   // embeddingModel(modelId: any): EmbeddingModelV2
 
@@ -46,12 +47,10 @@ export interface GitHubCopilotProvider {
 }
 
 /**
- * Create a GitHub Copilot provider instance.
+ * Create an OpenAI Compatible provider instance.
  */
-export function createGitHubCopilotOpenAICompatible(
-  options: GitHubCopilotProviderSettings = {},
-): GitHubCopilotProvider {
-  const baseURL = withoutTrailingSlash(options.baseURL ?? "https://api.githubcopilot.com")
+export function createOpenaiCompatible(options: OpenaiCompatibleProviderSettings = {}): OpenaiCompatibleProvider {
+  const baseURL = withoutTrailingSlash(options.baseURL ?? "https://api.openai.com/v1")
 
   if (!baseURL) {
     throw new Error("baseURL is required")
@@ -59,34 +58,34 @@ export function createGitHubCopilotOpenAICompatible(
 
   // Merge headers: defaults first, then user overrides
   const headers = {
-    // Default GitHub Copilot headers (can be overridden by user)
+    // Default OpenAI Compatible headers (can be overridden by user)
     ...(options.apiKey && { Authorization: `Bearer ${options.apiKey}` }),
     ...options.headers,
   }
 
   const getHeaders = () => withUserAgentSuffix(headers, `ai-sdk/openai-compatible/${VERSION}`)
 
-  const createChatModel = (modelId: GitHubCopilotModelId) => {
+  const createChatModel = (modelId: OpenaiCompatibleModelId) => {
     return new OpenAICompatibleChatLanguageModel(modelId, {
-      provider: `${options.name ?? "githubcopilot"}.chat`,
+      provider: `${options.name ?? "openai-compatible"}.chat`,
       headers: getHeaders,
       url: ({ path }) => `${baseURL}${path}`,
       fetch: options.fetch,
     })
   }
 
-  const createResponsesModel = (modelId: GitHubCopilotModelId) => {
+  const createResponsesModel = (modelId: OpenaiCompatibleModelId) => {
     return new OpenAIResponsesLanguageModel(modelId, {
-      provider: `${options.name ?? "githubcopilot"}.responses`,
+      provider: `${options.name ?? "openai-compatible"}.responses`,
       headers: getHeaders,
       url: ({ path }) => `${baseURL}${path}`,
       fetch: options.fetch,
     })
   }
 
-  const createLanguageModel = (modelId: GitHubCopilotModelId) => createChatModel(modelId)
+  const createLanguageModel = (modelId: OpenaiCompatibleModelId) => createChatModel(modelId)
 
-  const provider = function (modelId: GitHubCopilotModelId) {
+  const provider = function (modelId: OpenaiCompatibleModelId) {
     return createChatModel(modelId)
   }
 
@@ -94,8 +93,8 @@ export function createGitHubCopilotOpenAICompatible(
   provider.chat = createChatModel
   provider.responses = createResponsesModel
 
-  return provider as GitHubCopilotProvider
+  return provider as OpenaiCompatibleProvider
 }
 
-// Default GitHub Copilot provider instance
-export const githubCopilot = createGitHubCopilotOpenAICompatible()
+// Default OpenAI Compatible provider instance
+export const openaiCompatible = createOpenaiCompatible()
