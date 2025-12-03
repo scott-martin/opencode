@@ -1,4 +1,3 @@
-import type { ModelsDev } from "@/provider/models"
 import { MessageV2 } from "./message-v2"
 import { streamText } from "ai"
 import { Log } from "@/util/log"
@@ -11,6 +10,7 @@ import { SessionSummary } from "./summary"
 import { Bus } from "@/bus"
 import { SessionRetry } from "./retry"
 import { SessionStatus } from "./status"
+import type { Provider } from "@/provider/provider"
 
 export namespace SessionProcessor {
   const DOOM_LOOP_THRESHOLD = 3
@@ -31,8 +31,7 @@ export namespace SessionProcessor {
   export function create(input: {
     assistantMessage: MessageV2.Assistant
     sessionID: string
-    providerID: string
-    model: ModelsDev.Model
+    model: Provider.Model
     abort: AbortSignal
   }) {
     const toolcalls: Record<string, MessageV2.ToolPart> = {}
@@ -341,7 +340,7 @@ export namespace SessionProcessor {
             log.error("process", {
               error: e,
             })
-            const error = MessageV2.fromError(e, { providerID: input.providerID })
+            const error = MessageV2.fromError(e, { providerID: input.sessionID })
             const retry = SessionRetry.retryable(error)
             if (retry !== undefined) {
               attempt++

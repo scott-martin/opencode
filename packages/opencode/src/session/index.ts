@@ -6,7 +6,6 @@ import { Config } from "../config/config"
 import { Flag } from "../flag/flag"
 import { Identifier } from "../id/id"
 import { Installation } from "../installation"
-import type { ModelsDev } from "../provider/models"
 import { Share } from "../share/share"
 import { Storage } from "../storage/storage"
 import { Log } from "../util/log"
@@ -17,6 +16,7 @@ import { fn } from "@/util/fn"
 import { Command } from "../command"
 import { Snapshot } from "@/snapshot"
 import { ShareNext } from "@/share/share-next"
+import { Provider } from "@/provider/provider"
 
 export namespace Session {
   const log = Log.create({ service: "session" })
@@ -389,7 +389,7 @@ export namespace Session {
 
   export const getUsage = fn(
     z.object({
-      model: z.custom<ModelsDev.Model>(),
+      model: Provider.Model,
       usage: z.custom<LanguageModelUsage>(),
       metadata: z.custom<ProviderMetadata>().optional(),
     }),
@@ -420,16 +420,16 @@ export namespace Session {
       }
 
       const costInfo =
-        input.model.cost?.context_over_200k && tokens.input + tokens.cache.read > 200_000
-          ? input.model.cost.context_over_200k
+        input.model.cost?.experimentalOver200K && tokens.input + tokens.cache.read > 200_000
+          ? input.model.cost.experimentalOver200K
           : input.model.cost
       return {
         cost: safe(
           new Decimal(0)
             .add(new Decimal(tokens.input).mul(costInfo?.input ?? 0).div(1_000_000))
             .add(new Decimal(tokens.output).mul(costInfo?.output ?? 0).div(1_000_000))
-            .add(new Decimal(tokens.cache.read).mul(costInfo?.cache_read ?? 0).div(1_000_000))
-            .add(new Decimal(tokens.cache.write).mul(costInfo?.cache_write ?? 0).div(1_000_000))
+            .add(new Decimal(tokens.cache.read).mul(costInfo?.cache.read ?? 0).div(1_000_000))
+            .add(new Decimal(tokens.cache.write).mul(costInfo?.cache.write ?? 0).div(1_000_000))
             // TODO: update models.dev to have better pricing model, for now:
             // charge reasoning tokens at the same rate as output tokens
             .add(new Decimal(tokens.reasoning).mul(costInfo?.output ?? 0).div(1_000_000))

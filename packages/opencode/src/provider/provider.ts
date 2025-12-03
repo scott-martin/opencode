@@ -23,7 +23,7 @@ import { createVertex } from "@ai-sdk/google-vertex"
 import { createVertexAnthropic } from "@ai-sdk/google-vertex/anthropic"
 import { createOpenAI } from "@ai-sdk/openai"
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible"
-import { createOpenRouter } from "@openrouter/ai-sdk-provider"
+import { createOpenRouter, type LanguageModelV2 } from "@openrouter/ai-sdk-provider"
 import { createOpenaiCompatible as createGitHubCopilotOpenAICompatible } from "./sdk/openai-compatible/src"
 
 export namespace Provider {
@@ -43,13 +43,12 @@ export namespace Provider {
     "@ai-sdk/github-copilot": createGitHubCopilotOpenAICompatible,
   }
 
+  type CustomModelLoader = (sdk: any, modelID: string, options?: Record<string, any>) => Promise<any>
   type CustomLoader = (provider: Info) => Promise<{
     autoload: boolean
-    getModel?: (sdk: any, modelID: string, options?: Record<string, any>) => Promise<any>
+    getModel?: CustomModelLoader
     options?: Record<string, any>
   }>
-
-  type Source = "env" | "config" | "custom" | "api"
 
   const CUSTOM_LOADERS: Record<string, CustomLoader> = {
     async anthropic() {
@@ -314,20 +313,20 @@ export namespace Provider {
         reasoning: z.boolean(),
         attachment: z.boolean(),
         toolcall: z.boolean(),
-        input: {
+        input: z.object({
           text: z.boolean(),
           audio: z.boolean(),
           image: z.boolean(),
           video: z.boolean(),
           pdf: z.boolean(),
-        },
-        output: {
+        }),
+        output: z.object({
           text: z.boolean(),
           audio: z.boolean(),
           image: z.boolean(),
           video: z.boolean(),
           pdf: z.boolean(),
-        },
+        }),
       }),
       cost: z.object({
         input: z.number(),
@@ -433,7 +432,7 @@ export namespace Provider {
     }
   }
 
-  function fromModelsDevProvider(provider: ModelsDev.Provider): Info {
+  export function fromModelsDevProvider(provider: ModelsDev.Provider): Info {
     return {
       id: provider.id,
       source: "custom",
@@ -442,11 +441,6 @@ export namespace Provider {
       options: {},
       models: mapValues(provider.models, (model) => fromModelsDevModel(provider, model)),
     }
-  }
-
-  export type ModelWithStuff = {
-    language: LanguageModel
-    info: Model
   }
 
   const state = Instance.state(async () => {
@@ -464,7 +458,10 @@ export namespace Provider {
     }
 
     const providers: { [providerID: string]: Info } = {}
-    const models = new Map<string, ModelWithStuff>()
+    const languages = new Map<string, LanguageModelV2>()
+    const modelLoaders: {
+      [providerID: string]: CustomModelLoader
+    } = {}
     const sdk = new Map<number, SDK>()
 
     log.info("init")
@@ -631,6 +628,7 @@ export namespace Provider {
       if (disabled.has(providerID)) continue
       const result = await fn(database[providerID])
       if (result && (result.autoload || providers[providerID])) {
+        if (result.getModel) modelLoaders[providerID] = result.getModel
         mergeProvider(providerID, {
           source: "custom",
           options: result.options,
@@ -645,7 +643,6 @@ export namespace Provider {
         env: provider.env,
         name: provider.name,
         options: provider.options,
-        // TODO: merge models
       })
     }
 
@@ -689,9 +686,10 @@ export namespace Provider {
     }
 
     return {
-      models,
+      models: languages,
       providers,
       sdk,
+      modelLoaders,
     }
   })
 
@@ -789,15 +787,7 @@ export namespace Provider {
   }
 
   export async function getModel(providerID: string, modelID: string) {
-    const key = `${providerID}/${modelID}`
     const s = await state()
-    if (s.models.has(key)) return s.models.get(key)!
-
-    log.info("getModel", {
-      providerID,
-      modelID,
-    })
-
     const provider = s.providers[providerID]
     if (!provider) {
       const availableProviders = Object.keys(s.providers)
@@ -813,38 +803,29 @@ export namespace Provider {
       const suggestions = matches.map((m) => m.target)
       throw new ModelNotFoundError({ providerID, modelID, suggestions })
     }
+    return info
+  }
 
-    const sdk = await getSDK(info)
+  export async function getLanguage(model: Model) {
+    const s = await state()
+    const key = `${model.providerID}/${model.id}`
+    if (s.models.has(key)) return s.models.get(key)!
+
+    const provider = s.providers[model.providerID]
+    const sdk = await getSDK(model)
 
     try {
-      const language = provider.getModel
-        ? await provider.getModel(sdk, info.api.id, provider.options)
-        : sdk.languageModel(info.api.id)
-      log.info("found", { providerID, modelID })
-      const cached: ModelWithStuff = {
-        info,
-        language,
-      }
-      s.models.set(key, {
-        providerID,
-        modelID,
-        info,
-        language,
-        npm,
-      })
-      return {
-        modelID,
-        providerID,
-        info,
-        language,
-        npm,
-      }
+      const language = s.modelLoaders[model.providerID]
+        ? await s.modelLoaders[model.providerID](sdk, model.api.id, provider.options)
+        : sdk.languageModel(model.api.id)
+      s.models.set(key, language)
+      return language
     } catch (e) {
       if (e instanceof NoSuchModelError)
         throw new ModelNotFoundError(
           {
-            modelID: modelID,
-            providerID,
+            modelID: model.id,
+            providerID: model.providerID,
           },
           { cause: e },
         )
@@ -857,7 +838,7 @@ export namespace Provider {
     const provider = s.providers[providerID]
     if (!provider) return undefined
     for (const item of query) {
-      for (const modelID of Object.keys(provider.info.models)) {
+      for (const modelID of Object.keys(provider.models)) {
         if (modelID.includes(item))
           return {
             providerID,
@@ -893,7 +874,7 @@ export namespace Provider {
         priority = ["gpt-5-nano"]
       }
       for (const item of priority) {
-        for (const model of Object.keys(provider.info.models)) {
+        for (const model of Object.keys(provider.models)) {
           if (model.includes(item)) return getModel(providerID, model)
         }
       }
@@ -901,7 +882,7 @@ export namespace Provider {
 
     // Check if opencode provider is available before using it
     const opencodeProvider = await state().then((state) => state.providers["opencode"])
-    if (opencodeProvider && opencodeProvider.info.models["gpt-5-nano"]) {
+    if (opencodeProvider && opencodeProvider.models["gpt-5-nano"]) {
       return getModel("opencode", "gpt-5-nano")
     }
 
@@ -924,12 +905,12 @@ export namespace Provider {
 
     const provider = await list()
       .then((val) => Object.values(val))
-      .then((x) => x.find((p) => !cfg.provider || Object.keys(cfg.provider).includes(p.info.id)))
+      .then((x) => x.find((p) => !cfg.provider || Object.keys(cfg.provider).includes(p.id)))
     if (!provider) throw new Error("no providers found")
-    const [model] = sort(Object.values(provider.info.models))
+    const [model] = sort(Object.values(provider.models))
     if (!model) throw new Error("no models found")
     return {
-      providerID: provider.info.id,
+      providerID: provider.id,
       modelID: model.id,
     }
   }

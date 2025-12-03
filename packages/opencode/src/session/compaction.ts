@@ -7,7 +7,6 @@ import { MessageV2 } from "./message-v2"
 import { SystemPrompt } from "./system"
 import { Bus } from "../bus"
 import z from "zod"
-import type { ModelsDev } from "../provider/models"
 import { SessionPrompt } from "./prompt"
 import { Flag } from "../flag/flag"
 import { Token } from "../util/token"
@@ -29,7 +28,7 @@ export namespace SessionCompaction {
     ),
   }
 
-  export function isOverflow(input: { tokens: MessageV2.Assistant["tokens"]; model: ModelsDev.Model }) {
+  export function isOverflow(input: { tokens: MessageV2.Assistant["tokens"]; model: Provider.Model }) {
     if (Flag.OPENCODE_DISABLE_AUTOCOMPACT) return false
     const context = input.model.limit.context
     if (context === 0) return false
@@ -98,6 +97,7 @@ export namespace SessionCompaction {
     auto: boolean
   }) {
     const model = await Provider.getModel(input.model.providerID, input.model.modelID)
+    const language = await Provider.getLanguage(model)
     const system = [...SystemPrompt.compaction(model.providerID)]
     const msg = (await Session.updateMessage({
       id: Identifier.ascending("message"),
@@ -126,8 +126,7 @@ export namespace SessionCompaction {
     const processor = SessionProcessor.create({
       assistantMessage: msg,
       sessionID: input.sessionID,
-      providerID: input.model.providerID,
-      model: model.info,
+      model: model,
       abort: input.abort,
     })
     const result = await processor.process({
@@ -139,17 +138,13 @@ export namespace SessionCompaction {
       // set to 0, we handle loop
       maxRetries: 0,
       providerOptions: ProviderTransform.providerOptions(
-        model.npm,
+        model.api.npm,
         model.providerID,
-        pipe(
-          {},
-          mergeDeep(ProviderTransform.options(model.providerID, model.info, model.npm ?? "", input.sessionID)),
-          mergeDeep(model.info.options),
-        ),
+        pipe({}, mergeDeep(ProviderTransform.options(model, input.sessionID)), mergeDeep(model.options)),
       ),
-      headers: model.info.headers,
+      headers: model.headers,
       abortSignal: input.abort,
-      tools: model.info.tool_call ? {} : undefined,
+      tools: model.capabilities.toolcall ? {} : undefined,
       messages: [
         ...system.map(
           (x): ModelMessage => ({
@@ -183,7 +178,7 @@ export namespace SessionCompaction {
         },
       ],
       model: wrapLanguageModel({
-        model: model.language,
+        model: language,
         middleware: [
           {
             async transformParams(args) {

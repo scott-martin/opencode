@@ -47,7 +47,6 @@ import { fn } from "@/util/fn"
 import { SessionProcessor } from "./processor"
 import { TaskTool } from "@/tool/task"
 import { SessionStatus } from "./status"
-import type { ModelsDev } from "@/provider/models"
 
 // @ts-ignore
 globalThis.AI_SDK_LOG_WARNINGS = false
@@ -288,6 +287,7 @@ export namespace SessionPrompt {
         })
 
       const model = await Provider.getModel(lastUser.model.providerID, lastUser.model.modelID)
+      const language = await Provider.getLanguage(model)
       const task = tasks.pop()
 
       // pending subtask
@@ -311,7 +311,7 @@ export namespace SessionPrompt {
             reasoning: 0,
             cache: { read: 0, write: 0 },
           },
-          modelID: model.modelID,
+          modelID: model.id,
           providerID: model.providerID,
           time: {
             created: Date.now(),
@@ -408,7 +408,7 @@ export namespace SessionPrompt {
           agent: lastUser.agent,
           model: {
             providerID: model.providerID,
-            modelID: model.modelID,
+            modelID: model.id,
           },
           sessionID,
           auto: task.auto,
@@ -421,7 +421,7 @@ export namespace SessionPrompt {
       if (
         lastFinished &&
         lastFinished.summary !== true &&
-        SessionCompaction.isOverflow({ tokens: lastFinished.tokens, model: model.info })
+        SessionCompaction.isOverflow({ tokens: lastFinished.tokens, model })
       ) {
         await SessionCompaction.create({
           sessionID,
@@ -455,7 +455,7 @@ export namespace SessionPrompt {
             reasoning: 0,
             cache: { read: 0, write: 0 },
           },
-          modelID: model.modelID,
+          modelID: model.id,
           providerID: model.providerID,
           time: {
             created: Date.now(),
@@ -463,21 +463,18 @@ export namespace SessionPrompt {
           sessionID,
         })) as MessageV2.Assistant,
         sessionID: sessionID,
-        model: model.info,
-        providerID: model.providerID,
+        model,
         abort,
       })
       const system = await resolveSystemPrompt({
-        providerID: model.providerID,
-        model: model.info,
+        model,
         agent,
         system: lastUser.system,
       })
       const tools = await resolveTools({
         agent,
         sessionID,
-        providerID: model.providerID,
-        model: model.info,
+        model,
         tools: lastUser.tools,
         processor,
       })
@@ -487,19 +484,19 @@ export namespace SessionPrompt {
         {
           sessionID: sessionID,
           agent: lastUser.agent,
-          model: model.info,
+          model: model,
           provider,
           message: lastUser,
         },
         {
-          temperature: model.info.temperature
-            ? (agent.temperature ?? ProviderTransform.temperature(model.info))
+          temperature: model.capabilities.temperature
+            ? (agent.temperature ?? ProviderTransform.temperature(model))
             : undefined,
-          topP: agent.topP ?? ProviderTransform.topP(model.info),
+          topP: agent.topP ?? ProviderTransform.topP(model),
           options: pipe(
             {},
-            mergeDeep(ProviderTransform.options(model.providerID, model.info, model.npm, sessionID, provider?.options)),
-            mergeDeep(model.info.options),
+            mergeDeep(ProviderTransform.options(model, sessionID, provider?.options)),
+            mergeDeep(model.options),
             mergeDeep(agent.options),
           ),
         },
@@ -547,19 +544,19 @@ export namespace SessionPrompt {
                 "x-opencode-request": lastUser.id,
               }
             : undefined),
-          ...model.info.headers,
+          ...model.headers,
         },
         // set to 0, we handle loop
         maxRetries: 0,
         activeTools: Object.keys(tools).filter((x) => x !== "invalid"),
         maxOutputTokens: ProviderTransform.maxOutputTokens(
-          model.providerID,
+          model.api.npm,
           params.options,
-          model.info.limit.output,
+          model.limit.output,
           OUTPUT_TOKEN_MAX,
         ),
         abortSignal: abort,
-        providerOptions: ProviderTransform.providerOptions(model.npm, model.providerID, params.options),
+        providerOptions: ProviderTransform.providerOptions(model.api.npm, model.providerID, params.options),
         stopWhen: stepCountIs(1),
         temperature: params.temperature,
         topP: params.topP,
@@ -586,9 +583,9 @@ export namespace SessionPrompt {
             }),
           ),
         ],
-        tools: model.info.tool_call === false ? undefined : tools,
+        tools: model.capabilities.toolcall === false ? undefined : tools,
         model: wrapLanguageModel({
-          model: model.language,
+          model: language,
           middleware: [
             {
               async transformParams(args) {
@@ -604,7 +601,7 @@ export namespace SessionPrompt {
                       // Transform the inputSchema for provider compatibility
                       return {
                         ...tool,
-                        inputSchema: ProviderTransform.schema(model.providerID, model.info, tool.inputSchema),
+                        inputSchema: ProviderTransform.schema(model, tool.inputSchema),
                       }
                     }
                     // If no inputSchema, return tool unchanged
@@ -639,13 +636,8 @@ export namespace SessionPrompt {
     return Provider.defaultModel()
   }
 
-  async function resolveSystemPrompt(input: {
-    system?: string
-    agent: Agent.Info
-    providerID: string
-    model: ModelsDev.Model
-  }) {
-    let system = SystemPrompt.header(input.providerID)
+  async function resolveSystemPrompt(input: { system?: string; agent: Agent.Info; model: Provider.Model }) {
+    let system = SystemPrompt.header(input.model.providerID)
     system.push(
       ...(() => {
         if (input.system) return [input.system]
@@ -663,8 +655,7 @@ export namespace SessionPrompt {
 
   async function resolveTools(input: {
     agent: Agent.Info
-    providerID: string
-    model: ModelsDev.Model
+    model: Provider.Model
     sessionID: string
     tools?: Record<string, boolean>
     processor: SessionProcessor.Info
@@ -675,9 +666,9 @@ export namespace SessionPrompt {
       mergeDeep(await ToolRegistry.enabled(input.agent)),
       mergeDeep(input.tools ?? {}),
     )
-    for (const item of await ToolRegistry.tools(input.providerID)) {
+    for (const item of await ToolRegistry.tools(input.model.providerID)) {
       if (Wildcard.all(item.id, enabledTools) === false) continue
-      const schema = ProviderTransform.schema(input.providerID, input.model, z.toJSONSchema(item.parameters))
+      const schema = ProviderTransform.schema(input.model, z.toJSONSchema(item.parameters))
       tools[item.id] = tool({
         id: item.id as any,
         description: item.description,
@@ -1428,19 +1419,18 @@ export namespace SessionPrompt {
     if (!isFirst) return
     const small =
       (await Provider.getSmallModel(input.providerID)) ?? (await Provider.getModel(input.providerID, input.modelID))
+    const language = await Provider.getLanguage(small)
     const provider = await Provider.getProvider(small.providerID)
     const options = pipe(
       {},
-      mergeDeep(
-        ProviderTransform.options(small.providerID, small.info, small.npm ?? "", input.session.id, provider?.options),
-      ),
-      mergeDeep(ProviderTransform.smallOptions({ providerID: small.providerID, model: small.info })),
-      mergeDeep(small.info.options),
+      mergeDeep(ProviderTransform.options(small, input.session.id, provider?.options)),
+      mergeDeep(ProviderTransform.smallOptions(small)),
+      mergeDeep(small.options),
     )
     await generateText({
       // use higher # for reasoning models since reasoning tokens eat up a lot of the budget
-      maxOutputTokens: small.info.reasoning ? 3000 : 20,
-      providerOptions: ProviderTransform.providerOptions(small.npm, small.providerID, options),
+      maxOutputTokens: small.capabilities.reasoning ? 3000 : 20,
+      providerOptions: ProviderTransform.providerOptions(small.api.npm, small.providerID, options),
       messages: [
         ...SystemPrompt.title(small.providerID).map(
           (x): ModelMessage => ({
@@ -1471,8 +1461,8 @@ export namespace SessionPrompt {
           },
         ]),
       ],
-      headers: small.info.headers,
-      model: small.language,
+      headers: small.headers,
+      model: language,
     })
       .then((result) => {
         if (result.text)
@@ -1489,7 +1479,7 @@ export namespace SessionPrompt {
           })
       })
       .catch((error) => {
-        log.error("failed to generate title", { error, model: small.info.id })
+        log.error("failed to generate title", { error, model: small.id })
       })
   }
 }
