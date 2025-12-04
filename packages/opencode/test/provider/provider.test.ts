@@ -634,7 +634,7 @@ test("getModel uses realIdByKey for aliased models", async () => {
   })
 })
 
-test("provider api field sets default baseURL", async () => {
+test("provider api field sets model api.url", async () => {
   await using tmp = await tmpdir({
     init: async (dir) => {
       await Bun.write(
@@ -667,7 +667,8 @@ test("provider api field sets default baseURL", async () => {
     directory: tmp.path,
     fn: async () => {
       const providers = await Provider.list()
-      expect(providers["custom-api"].options.baseURL).toBe("https://api.example.com/v1")
+      // api field is stored on model.api.url, used by getSDK to set baseURL
+      expect(providers["custom-api"].models["model-1"].api.url).toBe("https://api.example.com/v1")
     },
   })
 })
@@ -1122,8 +1123,8 @@ test("provider with multiple env var options only includes apiKey when single en
     fn: async () => {
       const providers = await Provider.list()
       expect(providers["multi-env"]).toBeDefined()
-      // When multiple env options exist, apiKey should NOT be auto-set
-      expect(providers["multi-env"].options.apiKey).toBeUndefined()
+      // When multiple env options exist, key should NOT be auto-set
+      expect(providers["multi-env"].key).toBeUndefined()
     },
   })
 })
@@ -1164,8 +1165,8 @@ test("provider with single env var includes apiKey automatically", async () => {
     fn: async () => {
       const providers = await Provider.list()
       expect(providers["single-env"]).toBeDefined()
-      // Single env option should auto-set apiKey
-      expect(providers["single-env"].options.apiKey).toBe("my-api-key")
+      // Single env option should auto-set key
+      expect(providers["single-env"].key).toBe("my-api-key")
     },
   })
 })

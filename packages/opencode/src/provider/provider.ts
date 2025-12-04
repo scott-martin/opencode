@@ -481,8 +481,14 @@ export namespace Provider {
     function mergeProvider(providerID: string, provider: Partial<Info>) {
       const match = database[providerID]
       if (!match) return
-      // @ts-expect-error
-      providers[providerID] = mergeDeep(match, provider)
+      const existing = providers[providerID]
+      if (existing) {
+        // @ts-expect-error
+        providers[providerID] = mergeDeep(existing, provider)
+      } else {
+        // @ts-expect-error
+        providers[providerID] = mergeDeep(match, provider)
+      }
     }
 
     // extend database from config
@@ -494,7 +500,7 @@ export namespace Provider {
         env: provider.env ?? existing?.env ?? [],
         options: mergeDeep(existing?.options ?? {}, provider.options ?? {}),
         source: "config",
-        models: {},
+        models: existing?.models ?? {},
       }
 
       for (const [modelID, model] of Object.entries(provider.models ?? {})) {
@@ -520,18 +526,18 @@ export namespace Provider {
             attachment: model.attachment ?? existing?.capabilities.attachment ?? false,
             toolcall: model.tool_call ?? existing?.capabilities.toolcall ?? true,
             input: {
-              text: model.modalities?.input?.includes("text") ?? false,
-              audio: model.modalities?.input?.includes("audio") ?? false,
-              image: model.modalities?.input?.includes("image") ?? false,
-              video: model.modalities?.input?.includes("video") ?? false,
-              pdf: model.modalities?.input?.includes("pdf") ?? false,
+              text: model.modalities?.input?.includes("text") ?? existing?.capabilities.input.text ?? true,
+              audio: model.modalities?.input?.includes("audio") ?? existing?.capabilities.input.audio ?? false,
+              image: model.modalities?.input?.includes("image") ?? existing?.capabilities.input.image ?? false,
+              video: model.modalities?.input?.includes("video") ?? existing?.capabilities.input.video ?? false,
+              pdf: model.modalities?.input?.includes("pdf") ?? existing?.capabilities.input.pdf ?? false,
             },
             output: {
-              text: model.modalities?.output?.includes("text") ?? false,
-              audio: model.modalities?.output?.includes("audio") ?? false,
-              image: model.modalities?.output?.includes("image") ?? false,
-              video: model.modalities?.output?.includes("video") ?? false,
-              pdf: model.modalities?.output?.includes("pdf") ?? false,
+              text: model.modalities?.output?.includes("text") ?? existing?.capabilities.output.text ?? true,
+              audio: model.modalities?.output?.includes("audio") ?? existing?.capabilities.output.audio ?? false,
+              image: model.modalities?.output?.includes("image") ?? existing?.capabilities.output.image ?? false,
+              video: model.modalities?.output?.includes("video") ?? existing?.capabilities.output.video ?? false,
+              pdf: model.modalities?.output?.includes("pdf") ?? existing?.capabilities.output.pdf ?? false,
             },
           },
           cost: {
@@ -638,12 +644,11 @@ export namespace Provider {
 
     // load config
     for (const [providerID, provider] of configProviders) {
-      mergeProvider(providerID, {
-        source: "config",
-        env: provider.env,
-        name: provider.name,
-        options: provider.options,
-      })
+      const partial: Partial<Info> = { source: "config" }
+      if (provider.env) partial.env = provider.env
+      if (provider.name) partial.name = provider.name
+      if (provider.options) partial.options = provider.options
+      mergeProvider(providerID, partial)
     }
 
     for (const [providerID, provider] of Object.entries(providers)) {

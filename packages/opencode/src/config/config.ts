@@ -474,15 +474,7 @@ export namespace Config {
     .extend({
       whitelist: z.array(z.string()).optional(),
       blacklist: z.array(z.string()).optional(),
-      models: z
-        .record(
-          z.string(),
-          ModelsDev.Model.partial().refine(
-            (input) => input.id === undefined,
-            "The model.id field can no longer be specified. Use model.target to specify an alternate model id to use when calling the provider.",
-          ),
-        )
-        .optional(),
+      models: z.record(z.string(), ModelsDev.Model.partial()).optional(),
       options: z
         .object({
           apiKey: z.string().optional(),
