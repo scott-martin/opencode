@@ -12,7 +12,6 @@ export namespace ModelsDev {
   export const Model = z.object({
     id: z.string(),
     name: z.string(),
-    target: z.string(),
     release_date: z.string(),
     attachment: z.boolean(),
     reasoning: z.boolean(),
