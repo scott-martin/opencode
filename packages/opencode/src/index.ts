@@ -28,6 +28,9 @@ import { WebCommand } from "./cli/cmd/web"
 import { PrCommand } from "./cli/cmd/pr"
 import { SessionCommand } from "./cli/cmd/session"
 
+// process.env["no_proxy"] = "localhost,127.0.0.1"
+// process.env["NO_PROXY"] = "localhost,127.0.0.1"
+
 process.on("unhandledRejection", (e) => {
   Log.Default.error("rejection", {
     e: e instanceof Error ? e.message : e,

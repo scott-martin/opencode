@@ -2396,6 +2396,11 @@ export namespace Server {
   }
 
   export function listen(opts: { port: number; hostname: string }) {
+    // Add server hostname to NO_PROXY to prevent proxy loops when HTTP_PROXY is set
+    const noProxy = [process.env.NO_PROXY, opts.hostname].filter(Boolean).join(",")
+    process.env.NO_PROXY = noProxy
+    process.env.no_proxy = noProxy
+
     const server = Bun.serve({
       port: opts.port,
       hostname: opts.hostname,
