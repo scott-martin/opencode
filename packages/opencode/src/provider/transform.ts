@@ -219,6 +219,10 @@ export namespace ProviderTransform {
       }
     }
 
+    if (model.providerID === "baseten") {
+      result["chat_template_args"] = { enable_thinking: true }
+    }
+
     if (model.providerID === "openai" || providerOptions?.setCacheKey) {
       result["promptCacheKey"] = sessionID
     }
