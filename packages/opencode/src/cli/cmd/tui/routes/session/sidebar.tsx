@@ -49,14 +49,13 @@ export function Sidebar(props: { sessionID: string }) {
     }
   })
 
-  const keybind = useKeybind()
   const directory = useDirectory()
   const kv = useKV()
 
   const hasProviders = createMemo(() =>
     sync.data.provider.some((x) => x.id !== "opencode" || Object.values(x.models).some((y) => y.cost?.input !== 0)),
   )
-  const gettingStartedDismissed = createMemo(() => kv.get("gettingStartedDismissed", false))
+  const gettingStartedDismissed = createMemo(() => kv.get("dismissed_getting_started", false))
 
   return (
     <Show when={session()}>
@@ -252,7 +251,7 @@ export function Sidebar(props: { sessionID: string }) {
         </scrollbox>
 
         <box flexShrink={0} gap={1} paddingTop={1}>
-          <Show when={!hasProviders() && !gettingStartedDismissed()}>
+          <Show when={!false && !gettingStartedDismissed()}>
             <box
               backgroundColor={theme.backgroundElement}
               paddingTop={1}
@@ -270,7 +269,7 @@ export function Sidebar(props: { sessionID: string }) {
                   <text fg={theme.text}>
                     <b>Getting started</b>
                   </text>
-                  <text fg={theme.textMuted} onMouseDown={() => kv.set("gettingStartedDismissed", true)}>
+                  <text fg={theme.textMuted} onMouseDown={() => kv.set("dismissed_getting_started", true)}>
                     ✕
                   </text>
                 </box>
