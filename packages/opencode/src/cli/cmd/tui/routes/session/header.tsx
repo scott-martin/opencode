@@ -2,9 +2,10 @@ import { type Accessor, createMemo, Match, Show, Switch } from "solid-js"
 import { useRouteData } from "@tui/context/route"
 import { useSync } from "@tui/context/sync"
 import { useTheme } from "@tui/context/theme"
-import { EmptyBorder, SplitBorder } from "@tui/component/border"
+import { EmptyBorder } from "@tui/component/border"
 import type { Session } from "@opencode-ai/sdk/v2"
 import { useKeybind } from "../../context/keybind"
+import { useTerminalDimensions } from "@opentui/solid"
 
 const Title = (props: { session: Accessor<Session> }) => {
   const { theme } = useTheme()
@@ -24,29 +25,63 @@ export function Header() {
 
   const { theme } = useTheme()
   const keybind = useKeybind()
+  const dimensions = useTerminalDimensions()
+  const tall = createMemo(() => dimensions().height > 40)
 
   return (
     <box flexShrink={0}>
+      {/*<box
+        height={1}
+        border={["top"]}
+        borderColor={theme.backgroundPanel}
+        customBorderChars={{
+          ...EmptyBorder,
+          horizontal: "▄",
+        }}
+      />*/}
+      {/*<box
+        height={1}
+        border={["left"]}
+        borderColor={theme.border}
+        customBorderChars={{
+          ...EmptyBorder,
+          vertical: theme.backgroundPanel.a !== 0 ? "╹" : " ",
+        }}
+      >
+        <box
+          height={1}
+          border={["top"]}
+          borderColor={theme.backgroundPanel}
+          customBorderChars={
+            theme.backgroundPanel.a !== 0
+              ? {
+                  ...EmptyBorder,
+                  horizontal: "▀",
+                }
+              : {
+                  ...EmptyBorder,
+                  horizontal: " ",
+                }
+          }
+        />
+      </box>*/}
       <box
         border={["left"]}
         borderColor={theme.border}
         customBorderChars={{
           ...EmptyBorder,
           vertical: "┃",
+          bottomLeft: "╹",
         }}
-        // backgroundColor={theme.backgroundPanel}
       >
         <box
-          // paddingTop={1}
-          // paddingBottom={1}
+          paddingTop={tall() ? 1 : 0}
+          paddingBottom={tall() ? 1 : 0}
           paddingLeft={2}
           paddingRight={1}
-          // {...SplitBorder}
-          // border={["left"]}
-          // borderColor={theme.border}
           flexShrink={0}
           flexGrow={1}
-          backgroundColor={theme.backgroundElement}
+          backgroundColor={theme.backgroundPanel}
         >
           <Switch>
             <Match when={session()?.parentID}>
@@ -63,7 +98,7 @@ export function Header() {
                 <box flexGrow={1} flexShrink={1} />
                 <Show when={showShare()}>
                   <text fg={theme.textMuted} wrapMode="none" flexShrink={0}>
-                    /share{" "}
+                    /share
                   </text>
                 </Show>
               </box>
@@ -73,7 +108,7 @@ export function Header() {
                 <Title session={session} />
                 <Show when={showShare()}>
                   <text fg={theme.textMuted} wrapMode="none" flexShrink={0}>
-                    /share{" "}
+                    /share
                   </text>
                 </Show>
               </box>
@@ -87,15 +122,15 @@ export function Header() {
         borderColor={theme.border}
         customBorderChars={{
           ...EmptyBorder,
-          vertical: theme.backgroundElement.a !== 0 ? "╹" : " ",
+          vertical: theme.backgroundPanel.a !== 0 ? "╹" : " ",
         }}
       >
         <box
           height={1}
           border={["bottom"]}
-          borderColor={theme.backgroundElement}
+          borderColor={theme.backgroundPanel}
           customBorderChars={
-            theme.backgroundElement.a !== 0
+            theme.backgroundPanel.a !== 0
               ? {
                   ...EmptyBorder,
                   horizontal: "▀",
