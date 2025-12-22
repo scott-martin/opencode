@@ -2,9 +2,10 @@ import { type Accessor, createMemo, Match, Show, Switch } from "solid-js"
 import { useRouteData } from "@tui/context/route"
 import { useSync } from "@tui/context/sync"
 import { useTheme } from "@tui/context/theme"
-import { SplitBorder } from "@tui/component/border"
+import { EmptyBorder, SplitBorder } from "@tui/component/border"
 import type { Session } from "@opencode-ai/sdk/v2"
 import { useKeybind } from "../../context/keybind"
+import { useTerminalDimensions } from "@opentui/solid"
 
 const Title = (props: { session: Accessor<Session> }) => {
   const { theme } = useTheme()
@@ -24,12 +25,25 @@ export function Header() {
 
   const { theme } = useTheme()
   const keybind = useKeybind()
+  const dimensions = useTerminalDimensions()
+  const tall = createMemo(() => dimensions().height > 40)
 
   return (
     <box flexShrink={0}>
+      <Show when={!tall()}>
+        <box
+          height={1}
+          border={["top"]}
+          borderColor={theme.backgroundPanel}
+          customBorderChars={{
+            ...EmptyBorder,
+            horizontal: "▄",
+          }}
+        />
+      </Show>
       <box
-        paddingTop={1}
-        paddingBottom={1}
+        paddingTop={tall() ? 1 : 0}
+        paddingBottom={tall() ? 1 : 0}
         paddingLeft={2}
         paddingRight={1}
         {...SplitBorder}
@@ -70,6 +84,17 @@ export function Header() {
           </Match>
         </Switch>
       </box>
+      <Show when={!tall()}>
+        <box
+          height={1}
+          border={["bottom"]}
+          borderColor={theme.backgroundPanel}
+          customBorderChars={{
+            ...EmptyBorder,
+            horizontal: "▀",
+          }}
+        />
+      </Show>
     </box>
   )
 }
