@@ -67,7 +67,7 @@ export function Header() {
               <box flexGrow={1} flexShrink={1} />
               <Show when={showShare()}>
                 <text fg={theme.textMuted} wrapMode="none" flexShrink={0}>
-                  /share
+                  /share{" "}
                 </text>
               </Show>
             </box>
@@ -77,7 +77,7 @@ export function Header() {
               <Title session={session} />
               <Show when={showShare()}>
                 <text fg={theme.textMuted} wrapMode="none" flexShrink={0}>
-                  /share
+                  /share{" "}
                 </text>
               </Show>
             </box>
