@@ -59,7 +59,7 @@ export namespace Skill {
   )
 
   const SKILL_GLOB = new Bun.Glob("skill/**/SKILL.md")
-  const CLAUDE_SKILL_GLOB = new Bun.Glob("**/SKILL.md")
+  // const CLAUDE_SKILL_GLOB = new Bun.Glob("*/SKILL.md")
 
   interface DiscoveredSkill {
     path: string
@@ -85,20 +85,20 @@ export namespace Skill {
     }
 
     // Also scan .claude/skills/ walking up from cwd to worktree
-    for await (const dir of Filesystem.up({
-      targets: [".claude/skills"],
-      start: Instance.directory,
-      stop: Instance.worktree,
-    })) {
-      for await (const match of CLAUDE_SKILL_GLOB.scan({
-        cwd: dir,
-        absolute: true,
-        onlyFiles: true,
-        followSymlinks: true,
-      })) {
-        results.push({ path: match, baseDir: dir })
-      }
-    }
+    // for await (const dir of Filesystem.up({
+    //   targets: [".claude/skills"],
+    //   start: Instance.directory,
+    //   stop: Instance.worktree,
+    // })) {
+    //   for await (const match of CLAUDE_SKILL_GLOB.scan({
+    //     cwd: dir,
+    //     absolute: true,
+    //     onlyFiles: true,
+    //     followSymlinks: true,
+    //   })) {
+    //     paths.push(match)
+    //   }
+    // }
 
     return results
   }
