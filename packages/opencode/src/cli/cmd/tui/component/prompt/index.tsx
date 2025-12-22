@@ -1007,6 +1007,11 @@ export function Prompt(props: PromptProps) {
                     {keybind.print("agent_cycle")} <span style={{ fg: theme.textMuted }}>switch agent</span>
                   </text>
                 </Show>
+                <Show when={!wide()}>
+                  <text fg={theme.text}>
+                    {keybind.print("sidebar_toggle")} <span style={{ fg: theme.textMuted }}>sidebar</span>
+                  </text>
+                </Show>
                 <text fg={theme.text}>
                   {keybind.print("command_list")} <span style={{ fg: theme.textMuted }}>commands</span>
                 </text>
