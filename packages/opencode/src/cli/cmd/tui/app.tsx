@@ -197,9 +197,12 @@ function App() {
   // Update terminal window title based on current route and session
   // Braille spinner animation frames for when agent is running (space + single character for consistent width with "OC")
   const spinnerFrames = [" ⠋", " ⠙", " ⠹", " ⠸", " ⠼", " ⠴", " ⠦", " ⠧", " ⠇", " ⠏"]
+  // Permission request animation frames (flashing triangle with leading space)
+  const permissionFrames = [" ◭", "  "]
   let spinnerInterval: ReturnType<typeof setInterval> | undefined
   let spinnerIndex = 0
   let currentTitle = ""
+  let currentAnimationType: "spinner" | "permission" | undefined
 
   // Cleanup interval on component unmount
   onCleanup(() => {
@@ -216,6 +219,7 @@ function App() {
       if (spinnerInterval) {
         clearInterval(spinnerInterval)
         spinnerInterval = undefined
+        currentAnimationType = undefined
       }
       renderer.setTerminalTitle("OpenCode")
       return
@@ -226,11 +230,14 @@ function App() {
       const session = sync.session.get(sessionID)
       const status = sync.data.session_status[sessionID]
       const isBusy = status?.type === "busy"
+      const permissions = sync.data.permission[sessionID] ?? []
+      const hasPermissionRequest = permissions.length > 0
 
       if (!session || SessionApi.isDefaultTitle(session.title)) {
         if (spinnerInterval) {
           clearInterval(spinnerInterval)
           spinnerInterval = undefined
+          currentAnimationType = undefined
         }
         renderer.setTerminalTitle("OpenCode")
         return
@@ -239,21 +246,31 @@ function App() {
       // Truncate title to 40 chars max
       currentTitle = session.title.length > 40 ? session.title.slice(0, 37) + "..." : session.title
 
-      if (isBusy) {
-        // Start spinner animation
-        if (!spinnerInterval) {
+      // Determine which animation to show (permission takes priority)
+      const targetAnimation = hasPermissionRequest ? "permission" : isBusy ? "spinner" : undefined
+      const frames = hasPermissionRequest ? permissionFrames : spinnerFrames
+
+      if (targetAnimation) {
+        // Start or switch animation
+        if (!spinnerInterval || currentAnimationType !== targetAnimation) {
+          if (spinnerInterval) clearInterval(spinnerInterval)
           spinnerIndex = 0
-          renderer.setTerminalTitle(`${spinnerFrames[spinnerIndex]} | ${currentTitle}`)
-          spinnerInterval = setInterval(() => {
-            spinnerIndex = (spinnerIndex + 1) % spinnerFrames.length
-            renderer.setTerminalTitle(`${spinnerFrames[spinnerIndex]} | ${currentTitle}`)
-          }, 80)
+          currentAnimationType = targetAnimation
+          renderer.setTerminalTitle(`${frames[spinnerIndex]} | ${currentTitle}`)
+          spinnerInterval = setInterval(
+            () => {
+              spinnerIndex = (spinnerIndex + 1) % frames.length
+              renderer.setTerminalTitle(`${frames[spinnerIndex]} | ${currentTitle}`)
+            },
+            hasPermissionRequest ? 400 : 80,
+          )
         }
       } else {
-        // Stop spinner and show static "OC"
+        // Stop animation and show static "OC"
         if (spinnerInterval) {
           clearInterval(spinnerInterval)
           spinnerInterval = undefined
+          currentAnimationType = undefined
         }
         renderer.setTerminalTitle(`OC | ${currentTitle}`)
       }
