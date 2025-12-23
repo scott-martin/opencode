@@ -1,6 +1,5 @@
 import { defer } from "@/util/defer"
 import { rm } from "node:fs/promises"
-import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { CliRenderer } from "@opentui/core"
 
@@ -9,7 +8,7 @@ export namespace Editor {
     const editor = process.env["VISUAL"] || process.env["EDITOR"]
     if (!editor) return
 
-    const filepath = join(tmpdir(), `${Date.now()}.md`)
+    const filepath = join(process.cwd(), `.opencode-editor-${Date.now()}.md`)
     await using _ = defer(async () => rm(filepath, { force: true }))
 
     await Bun.write(filepath, opts.value)
