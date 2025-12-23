@@ -7657,6 +7657,11 @@
             "description": "Toggle terminal title",
             "default": "none",
             "type": "string"
+          },
+          "tips_toggle": {
+            "description": "Toggle tips on home screen",
+            "default": "<leader>h",
+            "type": "string"
           }
         },
         "additionalProperties": false
