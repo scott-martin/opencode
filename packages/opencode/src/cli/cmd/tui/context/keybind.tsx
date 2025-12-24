@@ -1,5 +1,6 @@
 import { createMemo } from "solid-js"
 import { useSync } from "@tui/context/sync"
+import { useKV } from "@tui/context/kv"
 import { Keybind } from "@/util/keybind"
 import { pipe, mapValues } from "remeda"
 import type { KeybindsConfig } from "@opencode-ai/sdk/v2"
@@ -12,6 +13,7 @@ export const { use: useKeybind, provider: KeybindProvider } = createSimpleContex
   name: "Keybind",
   init: () => {
     const sync = useSync()
+    const kv = useKV()
     const keybinds = createMemo(() => {
       return pipe(
         sync.data.config.keybinds ?? {},
@@ -49,8 +51,16 @@ export const { use: useKeybind, provider: KeybindProvider } = createSimpleContex
       }
     }
 
+    function trackUsedShortcut(key: keyof KeybindsConfig) {
+      const used = kv.get("used_shortcuts", []) as string[]
+      if (!used.includes(key)) {
+        kv.set("used_shortcuts", [...used, key])
+      }
+    }
+
     useKeyboard(async (evt) => {
       if (!store.leader && result.match("leader", evt)) {
+        trackUsedShortcut("leader")
         leader(true)
         return
       }
@@ -83,8 +93,9 @@ export const { use: useKeybind, provider: KeybindProvider } = createSimpleContex
         const keybind = keybinds()[key]
         if (!keybind) return false
         const parsed: Keybind.Info = result.parse(evt)
-        for (const key of keybind) {
-          if (Keybind.match(key, parsed)) {
+        for (const k of keybind) {
+          if (Keybind.match(k, parsed)) {
+            trackUsedShortcut(key)
             return true
           }
         }

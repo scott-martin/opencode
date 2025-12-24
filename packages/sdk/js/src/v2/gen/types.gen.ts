@@ -827,6 +827,10 @@ export type KeybindsConfig = {
    */
   status_view?: string
   /**
+   * View keyboard shortcuts
+   */
+  shortcuts_view?: string
+  /**
    * Export session to editor
    */
   session_export?: string

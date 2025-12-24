@@ -16,6 +16,7 @@ import { DialogMcp } from "@tui/component/dialog-mcp"
 import { DialogStatus } from "@tui/component/dialog-status"
 import { DialogThemeList } from "@tui/component/dialog-theme-list"
 import { DialogHelp } from "./ui/dialog-help"
+import { ShortcutsProvider, useShortcuts, ShortcutsPanel } from "./ui/dialog-shortcuts"
 import { CommandProvider, useCommandDialog } from "@tui/component/dialog-command"
 import { DialogAgent } from "@tui/component/dialog-agent"
 import { DialogSessionList } from "@tui/component/dialog-session-list"
@@ -124,11 +125,13 @@ export function tui(input: { url: string; args: Args; onExit?: () => Promise<voi
                                 <PromptStashProvider>
                                   <DialogProvider>
                                     <CommandProvider>
-                                      <PromptHistoryProvider>
-                                        <PromptRefProvider>
-                                          <App />
-                                        </PromptRefProvider>
-                                      </PromptHistoryProvider>
+                                      <ShortcutsProvider>
+                                        <PromptHistoryProvider>
+                                          <PromptRefProvider>
+                                            <App />
+                                          </PromptRefProvider>
+                                        </PromptHistoryProvider>
+                                      </ShortcutsProvider>
                                     </CommandProvider>
                                   </DialogProvider>
                                 </PromptStashProvider>
@@ -178,6 +181,7 @@ function App() {
   const sync = useSync()
   const exit = useExit()
   const promptRef = usePromptRef()
+  const shortcuts = useShortcuts()
 
   const [terminalTitleEnabled, setTerminalTitleEnabled] = createSignal(kv.get("terminal_title_enabled", true))
 
@@ -412,6 +416,16 @@ function App() {
       category: "System",
     },
     {
+      title: "View shortcuts",
+      value: "shortcuts.view",
+      keybind: "shortcuts_view",
+      category: "System",
+      onSelect: () => {
+        dialog.clear()
+        shortcuts.toggle()
+      },
+    },
+    {
       title: "Open docs",
       value: "docs.open",
       onSelect: () => {
@@ -565,6 +579,7 @@ function App() {
     <box
       width={dimensions().width}
       height={dimensions().height}
+      flexDirection="column"
       backgroundColor={theme.background}
       onMouseUp={async () => {
         if (Flag.OPENCODE_EXPERIMENTAL_DISABLE_COPY_ON_SELECT) {
@@ -585,14 +600,17 @@ function App() {
         }
       }}
     >
-      <Switch>
-        <Match when={route.data.type === "home"}>
-          <Home />
-        </Match>
-        <Match when={route.data.type === "session"}>
-          <Session />
-        </Match>
-      </Switch>
+      <box flexGrow={1} flexDirection="column">
+        <Switch>
+          <Match when={route.data.type === "home"}>
+            <Home />
+          </Match>
+          <Match when={route.data.type === "session"}>
+            <Session />
+          </Match>
+        </Switch>
+      </box>
+      <ShortcutsPanel />
     </box>
   )
 }
