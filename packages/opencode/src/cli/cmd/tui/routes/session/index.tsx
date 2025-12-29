@@ -1108,24 +1108,21 @@ export function Session() {
               </For>
             </scrollbox>
             <box flexShrink={0}>
-              <Switch>
-                <Match when={permissions().length > 0}>
-                  <PermissionPrompt request={permissions()[0]} />
-                </Match>
-                <Match when={!session()?.parentID}>
-                  <Prompt
-                    ref={(r) => {
-                      prompt = r
-                      promptRef.set(r)
-                    }}
-                    disabled={permissions().length > 0}
-                    onSubmit={() => {
-                      toBottom()
-                    }}
-                    sessionID={route.sessionID}
-                  />
-                </Match>
-              </Switch>
+              <Show when={permissions().length > 0}>
+                <PermissionPrompt request={permissions()[0]} />
+              </Show>
+              <Prompt
+                visible={!session().parentID && permissions().length === 0}
+                ref={(r) => {
+                  prompt = r
+                  promptRef.set(r)
+                }}
+                disabled={permissions().length > 0}
+                onSubmit={() => {
+                  toBottom()
+                }}
+                sessionID={route.sessionID}
+              />
             </box>
             <Show when={!sidebarVisible()}>
               <Footer />
