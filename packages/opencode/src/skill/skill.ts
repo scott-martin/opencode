@@ -5,6 +5,8 @@ import { NamedError } from "@opencode-ai/util/error"
 import { ConfigMarkdown } from "../config/markdown"
 import { Log } from "../util/log"
 import { Global } from "@/global"
+import { Filesystem } from "@/util/filesystem"
+import { exists } from "fs/promises"
 
 export namespace Skill {
   const log = Log.create({ service: "skill" })
@@ -34,13 +36,9 @@ export namespace Skill {
   )
 
   const OPENCODE_SKILL_GLOB = new Bun.Glob("skill/**/SKILL.md")
-  const CLAUDE_SKILL_GLOB = new Bun.Glob(".claude/skills/**/SKILL.md")
+  const CLAUDE_SKILL_GLOB = new Bun.Glob("skills/**/SKILL.md")
 
   export const state = Instance.state(async () => {
-    const directories = await Config.directories()
-    // include the global claude skills
-    directories.push(Global.Path.home)
-
     const skills: Record<string, Info> = {}
 
     const addSkill = async (match: string) => {
@@ -68,22 +66,39 @@ export namespace Skill {
       }
     }
 
-    for (const dir of directories) {
+    // Scan .opencode/skill/ directories
+    for (const dir of await Config.directories()) {
+      for await (const match of OPENCODE_SKILL_GLOB.scan({
+        cwd: dir,
+        absolute: true,
+        onlyFiles: true,
+        followSymlinks: true,
+      })) {
+        await addSkill(match)
+      }
+    }
+
+    // Scan .claude/skills/ directories (project-level)
+    const claudeDirs = await Array.fromAsync(
+      Filesystem.up({
+        targets: [".claude"],
+        start: Instance.directory,
+        stop: Instance.worktree,
+      }),
+    )
+    // Also include global ~/.claude/skills/
+    const globalClaude = `${Global.Path.home}/.claude`
+    if (await exists(globalClaude)) {
+      claudeDirs.push(globalClaude)
+    }
+
+    for (const dir of claudeDirs) {
       for await (const match of CLAUDE_SKILL_GLOB.scan({
         cwd: dir,
         absolute: true,
         onlyFiles: true,
         followSymlinks: true,
         dot: true,
-      })) {
-        await addSkill(match)
-      }
-
-      for await (const match of OPENCODE_SKILL_GLOB.scan({
-        cwd: dir,
-        absolute: true,
-        onlyFiles: true,
-        followSymlinks: true,
       })) {
         await addSkill(match)
       }
