@@ -1,7 +1,7 @@
 import z from "zod"
 import fuzzysort from "fuzzysort"
 import { Config } from "../config/config"
-import { mapValues, mergeDeep, sortBy } from "remeda"
+import { mapValues, mergeDeep, omit, pickBy, sortBy } from "remeda"
 import { NoSuchModelError, type Provider as SDK } from "ai"
 import { Log } from "../util/log"
 import { BunProc } from "../bun"
@@ -34,6 +34,8 @@ import { createCohere } from "@ai-sdk/cohere"
 import { createGateway } from "@ai-sdk/gateway"
 import { createTogetherAI } from "@ai-sdk/togetherai"
 import { createPerplexity } from "@ai-sdk/perplexity"
+import { createVercel } from "@ai-sdk/vercel"
+import { ProviderTransform } from "./transform"
 
 export namespace Provider {
   const log = Log.create({ service: "provider" })
@@ -57,6 +59,7 @@ export namespace Provider {
     "@ai-sdk/gateway": createGateway,
     "@ai-sdk/togetherai": createTogetherAI,
     "@ai-sdk/perplexity": createPerplexity,
+    "@ai-sdk/vercel": createVercel,
     // @ts-ignore (TODO: kill this code so we dont have to maintain it)
     "@ai-sdk/github-copilot": createGitHubCopilotOpenAICompatible,
   }
@@ -467,6 +470,7 @@ export namespace Provider {
       options: z.record(z.string(), z.any()),
       headers: z.record(z.string(), z.string()),
       release_date: z.string(),
+      variants: z.record(z.string(), z.record(z.string(), z.any())).optional(),
     })
     .meta({
       ref: "Model",
@@ -489,7 +493,7 @@ export namespace Provider {
   export type Info = z.infer<typeof Info>
 
   function fromModelsDevModel(provider: ModelsDev.Provider, model: ModelsDev.Model): Model {
-    return {
+    const m: Model = {
       id: model.id,
       providerID: provider.id,
       name: model.name,
@@ -546,7 +550,12 @@ export namespace Provider {
         interleaved: model.interleaved ?? false,
       },
       release_date: model.release_date,
+      variants: {},
     }
+
+    m.variants = mapValues(ProviderTransform.variants(m), (v) => v)
+
+    return m
   }
 
   export function fromModelsDevProvider(provider: ModelsDev.Provider): Info {
@@ -680,7 +689,13 @@ export namespace Provider {
           headers: mergeDeep(existingModel?.headers ?? {}, model.headers ?? {}),
           family: model.family ?? existingModel?.family ?? "",
           release_date: model.release_date ?? existingModel?.release_date ?? "",
+          variants: {},
         }
+        const merged = mergeDeep(ProviderTransform.variants(parsedModel), model.variants ?? {})
+        parsedModel.variants = mapValues(
+          pickBy(merged, (v) => !v.disabled),
+          (v) => omit(v, ["disabled"]),
+        )
         parsed.models[modelID] = parsedModel
       }
       database[providerID] = parsed
@@ -805,6 +820,16 @@ export namespace Provider {
           (configProvider?.whitelist && !configProvider.whitelist.includes(modelID))
         )
           delete provider.models[modelID]
+
+        // Filter out disabled variants from config
+        const configVariants = configProvider?.models?.[modelID]?.variants
+        if (configVariants && model.variants) {
+          const merged = mergeDeep(model.variants, configVariants)
+          model.variants = mapValues(
+            pickBy(merged, (v) => !v.disabled),
+            (v) => omit(v, ["disabled"]),
+          )
+        }
       }
 
       if (Object.keys(provider.models).length === 0) {
@@ -993,6 +1018,7 @@ export namespace Provider {
         "claude-haiku-4.5",
         "3-5-haiku",
         "3.5-haiku",
+        "gemini-3-flash",
         "gemini-2.5-flash",
         "gpt-5-nano",
       ]
