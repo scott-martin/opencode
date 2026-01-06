@@ -1274,6 +1274,10 @@ export type AgentConfig = {
    * @deprecated Use 'steps' field instead.
    */
   maxSteps?: number
+  /**
+   * Default model variant for this agent (e.g., 'high', 'low', 'max')
+   */
+  variant?: string
   permission?: PermissionConfig
   [key: string]:
     | unknown
@@ -1930,6 +1934,7 @@ export type Agent = {
     [key: string]: unknown
   }
   steps?: number
+  variant?: string
 }
 
 export type McpStatusConnected = {
