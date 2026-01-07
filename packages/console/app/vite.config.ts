@@ -6,12 +6,16 @@ export default defineConfig({
   plugins: [
     solidStart() as PluginOption,
     nitro({
+      experimental: {
+        websocket: true,
+      },
+      serverDir: "server",
       compatibilityDate: "2024-09-19",
       preset: "cloudflare_module",
       cloudflare: {
         nodeCompat: true,
       },
-    }),
+    } as any),
   ],
   server: {
     allowedHosts: true,

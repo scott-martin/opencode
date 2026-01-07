@@ -1,11 +1,10 @@
 import "./index.css"
 import { Title, Meta, Link } from "@solidjs/meta"
 //import { HttpHeader } from "@solidjs/start"
-import video from "../asset/lander/opencode-min.mp4"
-import videoPoster from "../asset/lander/opencode-poster.png"
 import { IconCopy, IconCheck } from "../component/icon"
 import { A, createAsync } from "@solidjs/router"
 import { EmailSignup } from "~/component/email-signup"
+import { TerminalDemo } from "~/component/terminal-demo"
 import { Tabs } from "@kobalte/core/tabs"
 import { Faq } from "~/component/faq"
 import { Header } from "~/component/header"
@@ -159,10 +158,8 @@ export default function Home() {
             </div>
           </section>
 
-          <section data-component="video">
-            <video src={video} autoplay playsinline loop muted preload="auto" poster={videoPoster}>
-              Your browser does not support the video tag.
-            </video>
+          <section data-component="demo-terminal">
+            <TerminalDemo />
           </section>
 
           <section data-component="what">
