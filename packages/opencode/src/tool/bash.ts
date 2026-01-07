@@ -178,6 +178,7 @@ export const BashTool = Tool.define("bash", async () => {
         output += chunk.toString()
         ctx.metadata({
           metadata: {
+            // truncate the metadata to avoid GIANT blobs of data (has nothing to do w/ what agent can access)
             output: output.length > MAX_METADATA_LENGTH ? output.slice(0, MAX_METADATA_LENGTH) + "\n\n..." : output,
             description: params.description,
           },
