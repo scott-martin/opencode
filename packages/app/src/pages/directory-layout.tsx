@@ -1,4 +1,4 @@
-import { createMemo, Show, type ParentProps } from "solid-js"
+import { createMemo, createSignal, onMount, Show, type ParentProps } from "solid-js"
 import { Portal } from "solid-js/web"
 import { useNavigate, useParams } from "@solidjs/router"
 import { SDKProvider, useSDK } from "@/context/sdk"
@@ -34,14 +34,23 @@ export default function Layout(props: ParentProps) {
               navigate(`/${params.dir}/session/${sessionID}`)
             }
 
-            const portalMount = document.getElementById(TOOLBAR_PORTAL_ID)
+            const [portalMount, setPortalMount] = createSignal<HTMLElement | null>(null)
+            onMount(() => {
+              setPortalMount(document.getElementById(TOOLBAR_PORTAL_ID))
+            })
+
+            const toolbarKey = createMemo(() => params.id ?? "new")
 
             return (
               <>
-                <Show when={portalMount}>
-                  <Portal mount={portalMount!}>
-                    <ToolbarSession />
-                  </Portal>
+                <Show when={portalMount()}>
+                  {(mount) => (
+                    <Portal mount={mount()}>
+                      <Show when={toolbarKey()} keyed>
+                        <ToolbarSession />
+                      </Show>
+                    </Portal>
+                  )}
                 </Show>
                 <DataProvider
                   data={sync.data}
