@@ -6,32 +6,31 @@ import {
   Match,
   onCleanup,
   onMount,
-  ParentProps,
   Show,
   Switch,
   untrack,
   type JSX,
+  type ParentProps,
 } from "solid-js"
+import { createStore, produce } from "solid-js/store"
 import { DateTime } from "luxon"
 import { A, useNavigate, useParams } from "@solidjs/router"
-import { useLayout, getAvatarColors, LocalProject } from "@/context/layout"
-import { useGlobalSync } from "@/context/global-sync"
-import { base64Decode, base64Encode } from "@opencode-ai/util/encode"
-import { Avatar } from "@opencode-ai/ui/avatar"
-import { ResizeHandle } from "@opencode-ai/ui/resize-handle"
+import type { Session } from "@opencode-ai/sdk/v2/client"
 import { Button } from "@opencode-ai/ui/button"
-import { Icon } from "@opencode-ai/ui/icon"
-import { IconButton } from "@opencode-ai/ui/icon-button"
-import { Tooltip, TooltipKeybind } from "@opencode-ai/ui/tooltip"
 import { Collapsible } from "@opencode-ai/ui/collapsible"
 import { DiffChanges } from "@opencode-ai/ui/diff-changes"
-import { Spinner } from "@opencode-ai/ui/spinner"
-import { Mark } from "@opencode-ai/ui/logo"
-import { getFilename } from "@opencode-ai/util/path"
 import { DropdownMenu } from "@opencode-ai/ui/dropdown-menu"
-import { Session } from "@opencode-ai/sdk/v2/client"
+import { Icon } from "@opencode-ai/ui/icon"
+import { IconButton } from "@opencode-ai/ui/icon-button"
+import { Mark } from "@opencode-ai/ui/logo"
+import { ResizeHandle } from "@opencode-ai/ui/resize-handle"
+import { Spinner } from "@opencode-ai/ui/spinner"
+import { Tooltip, TooltipKeybind } from "@opencode-ai/ui/tooltip"
+import { base64Decode, base64Encode } from "@opencode-ai/util/encode"
+import { getFilename } from "@opencode-ai/util/path"
+import { getAvatarColors, useLayout, type LocalProject } from "@/context/layout"
+import { useGlobalSync } from "@/context/global-sync"
 import { usePlatform } from "@/context/platform"
-import { createStore, produce } from "solid-js/store"
 import {
   DragDropProvider,
   DragDropSensors,
@@ -57,6 +56,8 @@ import { useCommand, type CommandOption } from "@/context/command"
 import { ConstrainDragXAxis } from "@/utils/solid-dnd"
 import { DialogSelectDirectory } from "@/components/dialog-select-directory"
 import { useServer } from "@/context/server"
+import { Toolbar } from "@/components/toolbar"
+import { ProjectIcon } from "@/components/project-icon"
 
 export default function Layout(props: ParentProps) {
   const [store, setStore] = createStore({
@@ -575,14 +576,15 @@ export default function Layout(props: ParentProps) {
     const hasError = createMemo(() => notifications().some((n) => n.type === "error"))
     const name = createMemo(() => props.project.name || getFilename(props.project.worktree))
     const mask = "radial-gradient(circle 5px at calc(100% - 2px) 2px, transparent 5px, black 5.5px)"
-    const opencode = "4b0ea68d7af9a6031a7ffda7ad66e0cb83315750"
 
     return (
       <div class="relative size-5 shrink-0 rounded-sm">
-        <Avatar
-          fallback={name()}
-          src={props.project.id === opencode ? "https://opencode.ai/favicon.svg" : props.project.icon?.url}
-          {...getAvatarColors(props.project.icon?.color)}
+        <ProjectIcon
+          name={name()}
+          projectId={props.project.id}
+          iconUrl={props.project.icon?.url}
+          iconColor={props.project.icon?.color}
+          size="small"
           class={`size-full ${props.class ?? ""}`}
           style={
             notifications().length > 0 && props.notify ? { "-webkit-mask-image": mask, "mask-image": mask } : undefined
@@ -669,77 +671,75 @@ export default function Layout(props: ParentProps) {
       return status?.type === "busy" || status?.type === "retry"
     })
     return (
-      <>
-        <div
-          data-session-id={props.session.id}
-          class="group/session relative w-full rounded-md cursor-default transition-colors
-                 hover:bg-surface-raised-base-hover focus-within:bg-surface-raised-base-hover has-[.active]:bg-surface-raised-base-hover"
-        >
-          <Tooltip placement={props.mobile ? "bottom" : "right"} value={props.session.title} gutter={10}>
-            <A
-              href={`${props.slug}/session/${props.session.id}`}
-              class="flex flex-col min-w-0 text-left w-full focus:outline-none pl-4 pr-2 py-1"
-            >
-              <div class="flex items-center self-stretch gap-6 justify-between transition-[padding] group-hover/session:pr-7 group-focus-within/session:pr-7 group-active/session:pr-7">
-                <span
-                  classList={{
-                    "text-14-regular text-text-strong overflow-hidden text-ellipsis truncate": true,
-                    "animate-pulse": isWorking(),
-                  }}
-                >
-                  {props.session.title}
-                </span>
-                <div class="shrink-0 group-hover/session:hidden group-active/session:hidden group-focus-within/session:hidden">
-                  <Switch>
-                    <Match when={isWorking()}>
-                      <Spinner class="size-2.5 mr-0.5" />
-                    </Match>
-                    <Match when={hasPermissions()}>
-                      <div class="size-1.5 mr-1.5 rounded-full bg-surface-warning-strong" />
-                    </Match>
-                    <Match when={hasError()}>
-                      <div class="size-1.5 mr-1.5 rounded-full bg-text-diff-delete-base" />
-                    </Match>
-                    <Match when={notifications().length > 0}>
-                      <div class="size-1.5 mr-1.5 rounded-full bg-text-interactive-base" />
-                    </Match>
-                    <Match when={true}>
-                      <span class="text-12-regular text-text-weak text-right whitespace-nowrap">
-                        {Math.abs(updated().diffNow().as("seconds")) < 60
-                          ? "Now"
-                          : updated()
-                              .toRelative({
-                                style: "short",
-                                unit: ["days", "hours", "minutes"],
-                              })
-                              ?.replace(" ago", "")
-                              ?.replace(/ days?/, "d")
-                              ?.replace(" min.", "m")
-                              ?.replace(" hr.", "h")}
-                      </span>
-                    </Match>
-                  </Switch>
-                </div>
+      <div
+        data-session-id={props.session.id}
+        class="group/session relative w-full rounded-md cursor-default transition-colors
+               hover:bg-surface-raised-base-hover focus-within:bg-surface-raised-base-hover has-[.active]:bg-surface-raised-base-hover"
+      >
+        <Tooltip placement={props.mobile ? "bottom" : "right"} value={props.session.title} gutter={10}>
+          <A
+            href={`${props.slug}/session/${props.session.id}`}
+            class="flex flex-col min-w-0 text-left w-full focus:outline-none pl-4 pr-2 py-1"
+          >
+            <div class="flex items-center self-stretch gap-6 justify-between transition-[padding] group-hover/session:pr-7 group-focus-within/session:pr-7 group-active/session:pr-7">
+              <span
+                classList={{
+                  "text-14-regular text-text-strong overflow-hidden text-ellipsis truncate": true,
+                  "animate-pulse": isWorking(),
+                }}
+              >
+                {props.session.title}
+              </span>
+              <div class="shrink-0 group-hover/session:hidden group-active/session:hidden group-focus-within/session:hidden">
+                <Switch>
+                  <Match when={isWorking()}>
+                    <Spinner class="size-2.5 mr-0.5" />
+                  </Match>
+                  <Match when={hasPermissions()}>
+                    <div class="size-1.5 mr-1.5 rounded-full bg-surface-warning-strong" />
+                  </Match>
+                  <Match when={hasError()}>
+                    <div class="size-1.5 mr-1.5 rounded-full bg-text-diff-delete-base" />
+                  </Match>
+                  <Match when={notifications().length > 0}>
+                    <div class="size-1.5 mr-1.5 rounded-full bg-text-interactive-base" />
+                  </Match>
+                  <Match when={true}>
+                    <span class="text-12-regular text-text-weak text-right whitespace-nowrap">
+                      {Math.abs(updated().diffNow().as("seconds")) < 60
+                        ? "Now"
+                        : updated()
+                            .toRelative({
+                              style: "short",
+                              unit: ["days", "hours", "minutes"],
+                            })
+                            ?.replace(" ago", "")
+                            ?.replace(/ days?/, "d")
+                            ?.replace(" min.", "m")
+                            ?.replace(" hr.", "h")}
+                    </span>
+                  </Match>
+                </Switch>
               </div>
-              <Show when={props.session.summary?.files}>
-                <div class="flex justify-between items-center self-stretch">
-                  <span class="text-12-regular text-text-weak">{`${props.session.summary?.files || "No"} file${props.session.summary?.files !== 1 ? "s" : ""} changed`}</span>
-                  <Show when={props.session.summary}>{(summary) => <DiffChanges changes={summary()} />}</Show>
-                </div>
-              </Show>
-            </A>
-          </Tooltip>
-          <div class="hidden group-hover/session:flex group-active/session:flex group-focus-within/session:flex text-text-base gap-1 items-center absolute top-1 right-1">
-            <TooltipKeybind
-              placement={props.mobile ? "bottom" : "right"}
-              title="Archive session"
-              keybind={command.keybind("session.archive")}
-            >
-              <IconButton icon="archive" variant="ghost" onClick={() => archiveSession(props.session)} />
-            </TooltipKeybind>
-          </div>
+            </div>
+            <Show when={props.session.summary?.files}>
+              <div class="flex justify-between items-center self-stretch">
+                <span class="text-12-regular text-text-weak">{`${props.session.summary?.files || "No"} file${props.session.summary?.files !== 1 ? "s" : ""} changed`}</span>
+                <Show when={props.session.summary}>{(summary) => <DiffChanges changes={summary()} />}</Show>
+              </div>
+            </Show>
+          </A>
+        </Tooltip>
+        <div class="hidden group-hover/session:flex group-active/session:flex group-focus-within/session:flex text-text-base gap-1 items-center absolute top-1 right-1">
+          <TooltipKeybind
+            placement={props.mobile ? "bottom" : "right"}
+            title="Archive session"
+            keybind={command.keybind("session.archive")}
+          >
+            <IconButton icon="archive" variant="ghost" onClick={() => archiveSession(props.session)} />
+          </TooltipKeybind>
         </div>
-      </>
+      </div>
     )
   }
 
@@ -780,7 +780,7 @@ export default function Layout(props: ParentProps) {
       }
     }
     return (
-      // @ts-ignore
+      // @ts-expect-error - SolidJS directive
       <div use:sortable classList={{ "opacity-30": sortable.isActiveDraggable }}>
         <Switch>
           <Match when={showExpanded()}>
@@ -902,58 +902,7 @@ export default function Layout(props: ParentProps) {
     return (
       <div class="flex flex-col self-stretch h-full items-center justify-between overflow-hidden min-h-0">
         <div class="flex flex-col items-start self-stretch gap-4 min-h-0">
-          <Show when={!sidebarProps.mobile}>
-            <div
-              classList={{
-                "border-b border-border-weak-base w-full h-12 ml-px flex items-center pl-1.75 shrink-0": true,
-                "justify-start": expanded(),
-              }}
-            >
-              <A href="/" class="shrink-0 h-8 flex items-center justify-start px-2 w-full" data-tauri-drag-region>
-                <Mark class="shrink-0" />
-              </A>
-            </div>
-          </Show>
           <div class="flex flex-col items-start self-stretch gap-4 px-2 overflow-hidden min-h-0">
-            <Show when={!sidebarProps.mobile}>
-              <TooltipKeybind
-                class="shrink-0"
-                placement="right"
-                title="Toggle sidebar"
-                keybind={command.keybind("sidebar.toggle")}
-                inactive={expanded()}
-              >
-                <Button
-                  variant="ghost"
-                  size="large"
-                  class="group/sidebar-toggle shrink-0 w-full text-left justify-start rounded-lg px-2"
-                  onClick={layout.sidebar.toggle}
-                >
-                  <div class="relative -ml-px flex items-center justify-center size-4 [&>*]:absolute [&>*]:inset-0">
-                    <Icon
-                      name={layout.sidebar.opened() ? "layout-left" : "layout-right"}
-                      size="small"
-                      class="group-hover/sidebar-toggle:hidden"
-                    />
-                    <Icon
-                      name={layout.sidebar.opened() ? "layout-left-partial" : "layout-right-partial"}
-                      size="small"
-                      class="hidden group-hover/sidebar-toggle:inline-block"
-                    />
-                    <Icon
-                      name={layout.sidebar.opened() ? "layout-left-full" : "layout-right-full"}
-                      size="small"
-                      class="hidden group-active/sidebar-toggle:inline-block"
-                    />
-                  </div>
-                  <Show when={layout.sidebar.opened()}>
-                    <div class="hidden group-hover/sidebar-toggle:block group-active/sidebar-toggle:block text-text-base">
-                      Toggle sidebar
-                    </div>
-                  </Show>
-                </Button>
-              </TooltipKeybind>
-            </Show>
             <DragDropProvider
               onDragStart={handleDragStart}
               onDragEnd={handleDragEnd}
@@ -1056,71 +1005,74 @@ export default function Layout(props: ParentProps) {
   }
 
   return (
-    <div class="relative flex-1 min-h-0 flex flex-col select-none [&_input]:select-text [&_textarea]:select-text [&_[contenteditable]]:select-text">
-      <div class="flex-1 min-h-0 flex">
-        <div
-          classList={{
-            "hidden xl:block": true,
-            "relative shrink-0": true,
-          }}
-          style={{ width: layout.sidebar.opened() ? `${layout.sidebar.width()}px` : "48px" }}
-        >
+    <>
+      <Toolbar />
+      <div class="relative flex-1 min-h-0 flex flex-col select-none [&_input]:select-text [&_textarea]:select-text [&_[contenteditable]]:select-text">
+        <div class="flex-1 min-h-0 flex">
           <div
             classList={{
-              "@container w-full h-full pb-5 bg-background-base": true,
-              "flex flex-col gap-5.5 items-start self-stretch justify-between": true,
-              "border-r border-border-weak-base contain-strict": true,
+              "hidden xl:block": true,
+              "relative shrink-0": true,
             }}
+            style={{ width: layout.sidebar.opened() ? `${layout.sidebar.width()}px` : "48px" }}
           >
-            <SidebarContent />
-          </div>
-          <Show when={layout.sidebar.opened()}>
-            <ResizeHandle
-              direction="horizontal"
-              size={layout.sidebar.width()}
-              min={150}
-              max={window.innerWidth * 0.3}
-              collapseThreshold={80}
-              onResize={layout.sidebar.resize}
-              onCollapse={layout.sidebar.close}
-            />
-          </Show>
-        </div>
-        <div class="xl:hidden">
-          <div
-            classList={{
-              "fixed inset-0 bg-black/50 z-40 transition-opacity duration-200": true,
-              "opacity-100 pointer-events-auto": layout.mobileSidebar.opened(),
-              "opacity-0 pointer-events-none": !layout.mobileSidebar.opened(),
-            }}
-            onClick={(e) => {
-              if (e.target === e.currentTarget) layout.mobileSidebar.hide()
-            }}
-          />
-          <div
-            classList={{
-              "@container fixed inset-y-0 left-0 z-50 w-72 bg-background-base border-r border-border-weak-base flex flex-col gap-5.5 items-start self-stretch justify-between pb-5 transition-transform duration-200 ease-out": true,
-              "translate-x-0": layout.mobileSidebar.opened(),
-              "-translate-x-full": !layout.mobileSidebar.opened(),
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div class="border-b border-border-weak-base w-full h-12 ml-px flex items-center pl-1.75 shrink-0">
-              <A
-                href="/"
-                class="shrink-0 h-8 flex items-center justify-start px-2 w-full"
-                onClick={() => layout.mobileSidebar.hide()}
-              >
-                <Mark class="shrink-0" />
-              </A>
+            <div
+              classList={{
+                "@container w-full h-full py-3 bg-background-base": true,
+                "flex flex-col gap-5.5 items-start self-stretch justify-between": true,
+                "border-r border-border-weak-base contain-strict": true,
+              }}
+            >
+              <SidebarContent />
             </div>
-            <SidebarContent mobile />
+            <Show when={layout.sidebar.opened()}>
+              <ResizeHandle
+                direction="horizontal"
+                size={layout.sidebar.width()}
+                min={150}
+                max={window.innerWidth * 0.3}
+                collapseThreshold={80}
+                onResize={layout.sidebar.resize}
+                onCollapse={layout.sidebar.close}
+              />
+            </Show>
           </div>
-        </div>
+          <div class="xl:hidden">
+            <div
+              classList={{
+                "fixed inset-0 bg-black/50 z-40 transition-opacity duration-200": true,
+                "opacity-100 pointer-events-auto": layout.mobileSidebar.opened(),
+                "opacity-0 pointer-events-none": !layout.mobileSidebar.opened(),
+              }}
+              onPointerDown={(e) => {
+                if (e.target === e.currentTarget) layout.mobileSidebar.hide()
+              }}
+            />
+            <div
+              classList={{
+                "@container fixed inset-y-0 left-0 z-50 w-72 bg-background-base border-r border-border-weak-base flex flex-col gap-5.5 items-start self-stretch justify-between pb-5 transition-transform duration-200 ease-out": true,
+                "translate-x-0": layout.mobileSidebar.opened(),
+                "-translate-x-full": !layout.mobileSidebar.opened(),
+              }}
+              onPointerDown={(e) => e.stopPropagation()}
+            >
+              <div class="border-b border-border-weak-base w-full h-12 ml-px flex items-center pl-1.75 shrink-0">
+                <A
+                  href="/"
+                  class="shrink-0 h-8 flex items-center justify-start px-2 w-full"
+                  onClick={() => layout.mobileSidebar.hide()}
+                >
+                  <Mark class="shrink-0" />
+                </A>
+              </div>
+              <SidebarContent mobile />
+            </div>
+          </div>
 
-        <main class="size-full overflow-x-hidden flex flex-col items-start contain-strict">{props.children}</main>
+          <main class="size-full overflow-x-hidden flex flex-col items-start contain-strict">{props.children}</main>
+        </div>
+        <Toast.Region />
       </div>
-      <Toast.Region />
-    </div>
+    </>
   )
 }

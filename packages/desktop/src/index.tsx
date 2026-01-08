@@ -1,24 +1,23 @@
 // @refresh reload
-import { render } from "solid-js/web"
-import { AppBaseProviders, AppInterface, PlatformProvider, Platform } from "@opencode-ai/app"
-import { open, save } from "@tauri-apps/plugin-dialog"
-import { open as shellOpen } from "@tauri-apps/plugin-shell"
-import { type as ostype } from "@tauri-apps/plugin-os"
-import { check, Update } from "@tauri-apps/plugin-updater"
+import { AppBaseProviders, AppInterface, Platform, PlatformProvider } from "@opencode-ai/app"
+import { Logo } from "@opencode-ai/ui/logo"
+import { AsyncStorage } from "@solid-primitives/storage"
 import { invoke } from "@tauri-apps/api/core"
 import { getCurrentWindow } from "@tauri-apps/api/window"
-import { isPermissionGranted, requestPermission } from "@tauri-apps/plugin-notification"
-import { relaunch } from "@tauri-apps/plugin-process"
-import { AsyncStorage } from "@solid-primitives/storage"
+import { open, save } from "@tauri-apps/plugin-dialog"
 import { fetch as tauriFetch } from "@tauri-apps/plugin-http"
+import { isPermissionGranted, requestPermission } from "@tauri-apps/plugin-notification"
+import { type as ostype } from "@tauri-apps/plugin-os"
+import { relaunch } from "@tauri-apps/plugin-process"
+import { open as shellOpen } from "@tauri-apps/plugin-shell"
 import { Store } from "@tauri-apps/plugin-store"
-import { Logo } from "@opencode-ai/ui/logo"
-import { Suspense, createResource, ParentProps } from "solid-js"
+import { check, Update } from "@tauri-apps/plugin-updater"
+import { createResource, ParentProps, Show } from "solid-js"
+import { render } from "solid-js/web"
 
-import { UPDATER_ENABLED } from "./updater"
-import { createMenu } from "./menu"
 import pkg from "../package.json"
-import { Show } from "solid-js"
+import { createMenu } from "./menu"
+import { UPDATER_ENABLED } from "./updater"
 
 const root = document.getElementById("root")
 if (import.meta.env.DEV && !(root instanceof HTMLElement)) {
@@ -269,9 +268,6 @@ root?.addEventListener("mousewheel", (e) => {
 render(() => {
   return (
     <PlatformProvider value={platform}>
-      {ostype() === "macos" && (
-        <div class="mx-px bg-background-base border-b border-border-weak-base h-8" data-tauri-drag-region />
-      )}
       <AppBaseProviders>
         <ServerGate>
           <AppInterface />

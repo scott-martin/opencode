@@ -1,8 +1,10 @@
 import { createMemo, Show, type ParentProps } from "solid-js"
+import { Portal } from "solid-js/web"
 import { useNavigate, useParams } from "@solidjs/router"
 import { SDKProvider, useSDK } from "@/context/sdk"
 import { SyncProvider, useSync } from "@/context/sync"
 import { LocalProvider } from "@/context/local"
+import { ToolbarSession, TOOLBAR_PORTAL_ID } from "@/components/toolbar"
 
 import { base64Decode } from "@opencode-ai/util/encode"
 import { DataProvider } from "@opencode-ai/ui/context"
@@ -14,6 +16,7 @@ export default function Layout(props: ParentProps) {
   const directory = createMemo(() => {
     return base64Decode(params.dir!)
   })
+
   return (
     <Show when={params.dir} keyed>
       <SDKProvider directory={directory()}>
@@ -31,15 +34,24 @@ export default function Layout(props: ParentProps) {
               navigate(`/${params.dir}/session/${sessionID}`)
             }
 
+            const portalMount = document.getElementById(TOOLBAR_PORTAL_ID)
+
             return (
-              <DataProvider
-                data={sync.data}
-                directory={directory()}
-                onPermissionRespond={respond}
-                onNavigateToSession={navigateToSession}
-              >
-                <LocalProvider>{props.children}</LocalProvider>
-              </DataProvider>
+              <>
+                <Show when={portalMount}>
+                  <Portal mount={portalMount!}>
+                    <ToolbarSession />
+                  </Portal>
+                </Show>
+                <DataProvider
+                  data={sync.data}
+                  directory={directory()}
+                  onPermissionRespond={respond}
+                  onNavigateToSession={navigateToSession}
+                >
+                  <LocalProvider>{props.children}</LocalProvider>
+                </DataProvider>
+              </>
             )
           })}
         </SyncProvider>
