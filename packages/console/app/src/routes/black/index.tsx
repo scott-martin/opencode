@@ -126,7 +126,7 @@ export default function Black() {
                         <li>Cancel your subscription at anytime</li>
                       </ul>
                       <div data-slot="actions">
-                        <button type="button" onClick={() => setSelected(null)} data-slot="cancel">
+                        <button type="button" onClick={cancel} data-slot="cancel">
                           Cancel
                         </button>
                         <a href={`/black/subscribe/${plan.id}`} data-slot="continue">
