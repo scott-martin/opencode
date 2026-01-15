@@ -1,8 +1,9 @@
 import { A, createAsync, RouteSectionProps } from "@solidjs/router"
 import { Title, Meta, Link } from "@solidjs/meta"
-import { createMemo } from "solid-js"
+import { createMemo, createSignal } from "solid-js"
 import { github } from "~/lib/github"
 import { config } from "~/config"
+import LightRays, { defaultConfig, LightRaysControls, type LightRaysConfig } from "~/component/light-rays"
 import "./black.css"
 
 export default function BlackLayout(props: RouteSectionProps) {
@@ -15,6 +16,8 @@ export default function BlackLayout(props: RouteSectionProps) {
         }).format(githubData()!.stars!)
       : config.github.starsFormatted.compact,
   )
+
+  const [lightRaysConfig, setLightRaysConfig] = createSignal<LightRaysConfig>(defaultConfig)
 
   return (
     <div data-page="black">
@@ -39,7 +42,10 @@ export default function BlackLayout(props: RouteSectionProps) {
         content="Get access to Claude, GPT, Gemini and more with OpenCode Black subscription plans."
       />
       <Meta name="twitter:image" content="/social-share-black.png" />
-      <div data-component="header-gradient" />
+
+      <LightRays config={lightRaysConfig} class="header-light-rays" />
+      <LightRaysControls config={lightRaysConfig} setConfig={setLightRaysConfig} />
+
       <header data-component="header">
         <A href="/" data-component="header-logo">
           <svg xmlns="http://www.w3.org/2000/svg" width="179" height="32" viewBox="0 0 179 32" fill="none">
