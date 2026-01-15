@@ -43,7 +43,6 @@ describe("ProviderTransform.options - setCacheKey", () => {
       model: mockModel,
       sessionID,
       providerOptions: { setCacheKey: true },
-      auth: undefined,
     })
     expect(result.promptCacheKey).toBe(sessionID)
   })
@@ -53,7 +52,6 @@ describe("ProviderTransform.options - setCacheKey", () => {
       model: mockModel,
       sessionID,
       providerOptions: { setCacheKey: false },
-      auth: undefined,
     })
     expect(result.promptCacheKey).toBeUndefined()
   })
@@ -63,13 +61,12 @@ describe("ProviderTransform.options - setCacheKey", () => {
       model: mockModel,
       sessionID,
       providerOptions: undefined,
-      auth: undefined,
     })
     expect(result.promptCacheKey).toBeUndefined()
   })
 
   test("should not set promptCacheKey when providerOptions does not have setCacheKey", () => {
-    const result = ProviderTransform.options({ model: mockModel, sessionID, providerOptions: {}, auth: undefined })
+    const result = ProviderTransform.options({ model: mockModel, sessionID, providerOptions: {} })
     expect(result.promptCacheKey).toBeUndefined()
   })
 
@@ -83,11 +80,11 @@ describe("ProviderTransform.options - setCacheKey", () => {
         npm: "@ai-sdk/openai",
       },
     }
-    const result = ProviderTransform.options({ model: openaiModel, sessionID, providerOptions: {}, auth: undefined })
+    const result = ProviderTransform.options({ model: openaiModel, sessionID, providerOptions: {} })
     expect(result.promptCacheKey).toBe(sessionID)
   })
 
-  test("should set store=false for openai provider with oauth auth", () => {
+  test("should set store=false for openai provider", () => {
     const openaiModel = {
       ...mockModel,
       providerID: "openai",
@@ -101,28 +98,8 @@ describe("ProviderTransform.options - setCacheKey", () => {
       model: openaiModel,
       sessionID,
       providerOptions: {},
-      auth: { type: "oauth", refresh: "r", access: "a", expires: 0 },
     })
     expect(result.store).toBe(false)
-  })
-
-  test("should not set store=false for openai provider with api auth", () => {
-    const openaiModel = {
-      ...mockModel,
-      providerID: "openai",
-      api: {
-        id: "gpt-4",
-        url: "https://api.openai.com",
-        npm: "@ai-sdk/openai",
-      },
-    }
-    const result = ProviderTransform.options({
-      model: openaiModel,
-      sessionID,
-      providerOptions: {},
-      auth: { type: "api", key: "sk-xxx" },
-    })
-    expect(result.store).toBeUndefined()
   })
 })
 
@@ -773,7 +750,7 @@ describe("ProviderTransform.message - strip openai metadata when store=false", (
     expect(result[0].content[0].providerOptions?.openai?.otherOption).toBe("value")
   })
 
-  test("does not strip metadata when store is not false", () => {
+  test("strips metadata for openai package even when store is true", () => {
     const msgs = [
       {
         role: "assistant",
@@ -791,12 +768,13 @@ describe("ProviderTransform.message - strip openai metadata when store=false", (
       },
     ] as any[]
 
+    // openai package always strips itemId regardless of store value
     const result = ProviderTransform.message(msgs, openaiModel, { store: true }) as any[]
 
-    expect(result[0].content[0].providerOptions?.openai?.itemId).toBe("msg_123")
+    expect(result[0].content[0].providerOptions?.openai?.itemId).toBeUndefined()
   })
 
-  test("does not strip metadata for non-openai packages", () => {
+  test("strips metadata for non-openai packages when store is false", () => {
     const anthropicModel = {
       ...openaiModel,
       providerID: "anthropic",
@@ -823,7 +801,40 @@ describe("ProviderTransform.message - strip openai metadata when store=false", (
       },
     ] as any[]
 
+    // store=false triggers stripping even for non-openai packages
     const result = ProviderTransform.message(msgs, anthropicModel, { store: false }) as any[]
+
+    expect(result[0].content[0].providerOptions?.openai?.itemId).toBeUndefined()
+  })
+
+  test("does not strip metadata for non-openai packages when store is not false", () => {
+    const anthropicModel = {
+      ...openaiModel,
+      providerID: "anthropic",
+      api: {
+        id: "claude-3",
+        url: "https://api.anthropic.com",
+        npm: "@ai-sdk/anthropic",
+      },
+    }
+    const msgs = [
+      {
+        role: "assistant",
+        content: [
+          {
+            type: "text",
+            text: "Hello",
+            providerOptions: {
+              openai: {
+                itemId: "msg_123",
+              },
+            },
+          },
+        ],
+      },
+    ] as any[]
+
+    const result = ProviderTransform.message(msgs, anthropicModel, {}) as any[]
 
     expect(result[0].content[0].providerOptions?.openai?.itemId).toBe("msg_123")
   })

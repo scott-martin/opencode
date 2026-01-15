@@ -3,7 +3,6 @@ import { unique } from "remeda"
 import type { JSONSchema } from "zod/v4/core"
 import type { Provider } from "./provider"
 import type { ModelsDev } from "./models"
-import type { Auth } from "@/auth"
 import { iife } from "@/util/iife"
 
 type Modality = NonNullable<ModelsDev.Model["modalities"]>["input"][number]
@@ -482,7 +481,6 @@ export namespace ProviderTransform {
     model: Provider.Model
     sessionID: string
     providerOptions?: Record<string, any>
-    auth: Auth.Info | undefined
   }): Record<string, any> {
     const result: Record<string, any> = {}
 
