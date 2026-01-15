@@ -1032,12 +1032,34 @@ export function Prompt(props: PromptProps) {
                       }
                     }
 
+                    const formatDuration = (secs: number) => {
+                      if (secs <= 0) return ""
+                      if (secs < 60) return `${secs}s`
+                      if (secs < 3600) {
+                        const mins = Math.floor(secs / 60)
+                        const remainingSecs = secs % 60
+                        return remainingSecs > 0 ? `${mins}m ${remainingSecs}s` : `${mins}m`
+                      }
+                      if (secs < 86400) {
+                        const hours = Math.floor(secs / 3600)
+                        const remainingMins = Math.floor((secs % 3600) / 60)
+                        return remainingMins > 0 ? `${hours}h ${remainingMins}m` : `${hours}h`
+                      }
+                      if (secs < 604800) {
+                        const days = Math.floor(secs / 86400)
+                        return days === 1 ? "~1 day" : `~${days} days`
+                      }
+                      const weeks = Math.floor(secs / 604800)
+                      return weeks === 1 ? "~1 week" : `~${weeks} weeks`
+                    }
+
                     const retryText = () => {
                       const r = retry()
                       if (!r) return ""
                       const baseMessage = message()
                       const truncatedHint = isTruncated() ? " (click to expand)" : ""
-                      const retryInfo = ` [retrying ${seconds() > 0 ? `in ${seconds()}s ` : ""}attempt #${r.attempt}]`
+                      const duration = formatDuration(seconds())
+                      const retryInfo = ` [retrying ${duration ? `in ${duration} ` : ""}attempt #${r.attempt}]`
                       return baseMessage + truncatedHint + retryInfo
                     }
 
