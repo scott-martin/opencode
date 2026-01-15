@@ -7,7 +7,11 @@
     "x86_64-darwin": "sha256-CHrE2z+LqY2WXTQeGWG5LNMF1AY4UGSwViJAy4IwIVw="
 =======
     "x86_64-linux": "sha256-9QHW6Ue9VO1VKsu6sg4gRtxgifQGNJlfVVXaa0Uc0XQ=",
+<<<<<<< HEAD
     "aarch64-darwin": "sha256-IOgZ/LP4lvFX3OlalaFuQFYAEFwP+lxz3BRwvu4Hmj4="
 >>>>>>> 6e0a58c50 (Update Nix flake.lock and x86_64-linux hash)
+=======
+    "aarch64-darwin": "sha256-G8tTkuUSFQNOmjbu6cIi6qeyNWtGogtUVNi2CSgcgX0="
+>>>>>>> 8a0e3e909 (Update aarch64-darwin hash)
   }
 }
