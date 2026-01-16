@@ -40,6 +40,7 @@ export type PromptProps = {
   ref?: (ref: PromptRef) => void
   hint?: JSX.Element
   showPlaceholder?: boolean
+  runningAgent?: string
 }
 
 export type PromptRef = {
@@ -701,20 +702,19 @@ export function Prompt(props: PromptProps) {
   })
 
   const spinnerDef = createMemo(() => {
-    const color = local.agent.color(local.agent.current().name)
+    const agent = status().type !== "idle" && props.runningAgent ? props.runningAgent : local.agent.current().name
+    const color = local.agent.color(agent)
     return {
       frames: createFrames({
         color,
         style: "blocks",
         inactiveFactor: 0.6,
-        // enableFading: false,
         minAlpha: 0.3,
       }),
       color: createColors({
         color,
         style: "blocks",
         inactiveFactor: 0.6,
-        // enableFading: false,
         minAlpha: 0.3,
       }),
     }

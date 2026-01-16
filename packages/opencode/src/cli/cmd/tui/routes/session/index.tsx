@@ -136,6 +136,11 @@ export function Session() {
     return messages().findLast((x) => x.role === "assistant")
   })
 
+  const runningAgent = createMemo(() => {
+    const msg = messages().findLast((x) => x.role === "assistant" && !x.time.completed)
+    return msg?.agent
+  })
+
   const dimensions = useTerminalDimensions()
   const [sidebar, setSidebar] = kv.signal<"auto" | "hide">("sidebar", "hide")
   const [sidebarOpen, setSidebarOpen] = createSignal(false)
@@ -1044,6 +1049,7 @@ export function Session() {
                   toBottom()
                 }}
                 sessionID={route.sessionID}
+                runningAgent={runningAgent()}
               />
             </box>
           </Show>
