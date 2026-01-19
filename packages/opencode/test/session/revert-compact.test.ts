@@ -1,8 +1,7 @@
-import { describe, expect, test, beforeEach, afterEach } from "bun:test"
+import { describe, expect, test } from "bun:test"
 import path from "path"
 import { Session } from "../../src/session"
 import { SessionRevert } from "../../src/session/revert"
-import { SessionCompaction } from "../../src/session/compaction"
 import { MessageV2 } from "../../src/session/message-v2"
 import { Log } from "../../src/util/log"
 import { Instance } from "../../src/project/instance"
@@ -53,10 +52,6 @@ describe("revert + compact workflow", () => {
           sessionID,
           mode: "default",
           agent: "default",
-          path: {
-            cwd: tmp.path,
-            root: tmp.path,
-          },
           cost: 0,
           tokens: {
             output: 0,
@@ -113,10 +108,6 @@ describe("revert + compact workflow", () => {
           sessionID,
           mode: "default",
           agent: "default",
-          path: {
-            cwd: tmp.path,
-            root: tmp.path,
-          },
           cost: 0,
           tokens: {
             output: 0,
@@ -227,10 +218,6 @@ describe("revert + compact workflow", () => {
           sessionID,
           mode: "default",
           agent: "default",
-          path: {
-            cwd: tmp.path,
-            root: tmp.path,
-          },
           cost: 0,
           tokens: {
             output: 0,

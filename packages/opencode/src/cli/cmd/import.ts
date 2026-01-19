@@ -111,30 +111,32 @@ export const ImportCommand = cmd({
       )
 
       for (const msg of exportData.messages) {
-        const { id: msgId, sessionID: msgSessionID, ...msgData } = msg.info
+        const { id: msgId, sessionID: msgSessionID, role: msgRole, ...msgData } = msg.info
         Database.use((db) =>
           db
             .insert(MessageTable)
             .values({
               id: msgId,
               sessionID: exportData.info.id,
+              role: msgRole,
               data: msgData,
             })
-            .onConflictDoUpdate({ target: MessageTable.id, set: { data: msgData } })
+            .onConflictDoUpdate({ target: MessageTable.id, set: { role: msgRole, data: msgData } })
             .run(),
         )
 
         for (const part of msg.parts) {
-          const { id: partId, messageID: _, sessionID: __, ...partData } = part
+          const { id: partId, messageID: _, sessionID: __, type: partType, ...partData } = part
           Database.use((db) =>
             db
               .insert(PartTable)
               .values({
                 id: partId,
                 messageID: msg.info.id,
+                type: partType,
                 data: partData,
               })
-              .onConflictDoUpdate({ target: PartTable.id, set: { data: partData } })
+              .onConflictDoUpdate({ target: PartTable.id, set: { type: partType, data: partData } })
               .run(),
           )
         }

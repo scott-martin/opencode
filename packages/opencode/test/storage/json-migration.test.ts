@@ -384,7 +384,7 @@ describe("JSON to SQLite migration", () => {
       const db = drizzle(sqlite)
       const row = db.select().from(PartTable).where(eq(PartTable.id, fixtures.part.id)).get()
       expect(row?.id).toBe(fixtures.part.id)
-      expect(row?.messageID).toBe(fixtures.message.id)
+      expect(row?.message_id).toBe(fixtures.message.id)
     })
 
     test("skips orphaned part (missing message)", async () => {

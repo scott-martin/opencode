@@ -372,10 +372,6 @@ export namespace MessageV2 {
      */
     mode: z.string(),
     agent: z.string(),
-    path: z.object({
-      cwd: z.string(),
-      root: z.string(),
-    }),
     summary: z.boolean().optional(),
     cost: z.number(),
     tokens: z.object({
@@ -633,7 +629,7 @@ export namespace MessageV2 {
             part: PartTable,
           })
           .from(MessageTable)
-          .leftJoin(PartTable, eq(PartTable.messageID, MessageTable.id))
+          .leftJoin(PartTable, eq(PartTable.message_id, MessageTable.id))
           .where(
             inArray(
               MessageTable.id,
@@ -650,13 +646,19 @@ export namespace MessageV2 {
         const first = group[0]
         if (!first) continue
         yield {
-          info: { ...first.message.data, id: first.message.id, sessionID: first.message.sessionID } as Info,
+          info: {
+            ...first.message.data,
+            role: first.message.role,
+            id: first.message.id,
+            sessionID: first.message.sessionID,
+          } as Info,
           parts: group
             .filter((row) => row.part)
             .map((row) => ({
               ...row.part!.data,
+              type: row.part!.type,
               id: row.part!.id,
-              messageID: row.part!.messageID,
+              messageID: row.part!.message_id,
               sessionID: first.message.sessionID,
             })) as Part[],
         }
@@ -672,17 +674,19 @@ export namespace MessageV2 {
       db
         .select({
           id: PartTable.id,
-          messageID: PartTable.messageID,
+          messageID: PartTable.message_id,
           sessionID: MessageTable.sessionID,
+          type: PartTable.type,
           data: PartTable.data,
         })
         .from(PartTable)
-        .innerJoin(MessageTable, eq(PartTable.messageID, MessageTable.id))
-        .where(eq(PartTable.messageID, messageID))
+        .innerJoin(MessageTable, eq(PartTable.message_id, MessageTable.id))
+        .where(eq(PartTable.message_id, messageID))
         .all(),
     )
     const result = rows.map((row) => ({
       ...row.data,
+      type: row.type,
       id: row.id,
       messageID: row.messageID,
       sessionID: row.sessionID,
@@ -704,7 +708,7 @@ export namespace MessageV2 {
             part: PartTable,
           })
           .from(MessageTable)
-          .leftJoin(PartTable, eq(PartTable.messageID, MessageTable.id))
+          .leftJoin(PartTable, eq(PartTable.message_id, MessageTable.id))
           .where(eq(MessageTable.id, input.messageID))
           .orderBy(PartTable.id)
           .all(),
@@ -712,13 +716,19 @@ export namespace MessageV2 {
       const first = rows[0]
       if (!first) throw new Error(`Message not found: ${input.messageID}`)
       return {
-        info: { ...first.message.data, id: first.message.id, sessionID: first.message.sessionID } as Info,
+        info: {
+          ...first.message.data,
+          role: first.message.role,
+          id: first.message.id,
+          sessionID: first.message.sessionID,
+        } as Info,
         parts: rows
           .filter((row) => row.part)
           .map((row) => ({
             ...row.part!.data,
+            type: row.part!.type,
             id: row.part!.id,
-            messageID: row.part!.messageID,
+            messageID: row.part!.message_id,
             sessionID: first.message.sessionID,
           })) as Part[],
       }
