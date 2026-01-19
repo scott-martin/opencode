@@ -1,7 +1,8 @@
 import { UserMessage } from "@opencode-ai/sdk/v2"
-import { ComponentProps, Show, splitProps } from "solid-js"
+import { ComponentProps, Show, splitProps, createSignal, onMount, onCleanup } from "solid-js"
 import { MessageNav } from "./message-nav"
 import "./session-message-rail.css"
+import { Portal } from "solid-js/web"
 
 export interface SessionMessageRailProps extends ComponentProps<"div"> {
   messages: UserMessage[]
@@ -12,6 +13,26 @@ export interface SessionMessageRailProps extends ComponentProps<"div"> {
 
 export function SessionMessageRail(props: SessionMessageRailProps) {
   const [local, others] = splitProps(props, ["messages", "current", "wide", "onMessageSelect", "class", "classList"])
+  let anchorRef: HTMLDivElement | undefined
+  const [position, setPosition] = createSignal({ top: 0, left: 0, height: 0 })
+
+  const updatePosition = () => {
+    if (anchorRef) {
+      const rect = anchorRef.getBoundingClientRect()
+      setPosition({ top: rect.top, left: rect.left, height: rect.height })
+    }
+  }
+
+  onMount(() => {
+    updatePosition()
+    window.addEventListener("scroll", updatePosition, true)
+    window.addEventListener("resize", updatePosition)
+  })
+
+  onCleanup(() => {
+    window.removeEventListener("scroll", updatePosition, true)
+    window.removeEventListener("resize", updatePosition)
+  })
 
   return (
     <Show when={(local.messages?.length ?? 0) > 1}>
@@ -24,22 +45,25 @@ export function SessionMessageRail(props: SessionMessageRailProps) {
           [local.class ?? ""]: !!local.class,
         }}
       >
-        <div data-slot="session-message-rail-compact">
-          <MessageNav
-            messages={local.messages}
-            current={local.current}
-            onMessageSelect={local.onMessageSelect}
-            size="compact"
-          />
-        </div>
-        <div data-slot="session-message-rail-full">
-          <MessageNav
-            messages={local.messages}
-            current={local.current}
-            onMessageSelect={local.onMessageSelect}
-            size={local.wide ? "normal" : "compact"}
-          />
-        </div>
+        <div ref={(el) => (anchorRef = el)} data-slot="session-message-rail-anchor" />
+        <Portal mount={document.body}>
+          <div
+            data-slot="session-message-rail-portal"
+            style={{
+              position: "fixed",
+              top: `${position().top}px`,
+              left: `${position().left}px`,
+              height: `${position().height}px`,
+            }}
+          >
+            <MessageNav
+              messages={local.messages}
+              current={local.current}
+              onMessageSelect={local.onMessageSelect}
+              size={local.wide ? "normal" : "compact"}
+            />
+          </div>
+        </Portal>
       </div>
     </Show>
   )
