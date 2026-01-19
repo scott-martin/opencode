@@ -1236,7 +1236,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
 
     const optimisticParts = requestParts.map((part) => ({
       ...part,
-      sessionID: session.id,
+      sessionID: session?.id ?? "",
       messageID,
     })) as unknown as Part[]
 
@@ -1254,9 +1254,9 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     const addOptimisticMessage = () => {
       setSyncStore(
         produce((draft) => {
-          const messages = draft.message[session.id]
+          const messages = draft.message[session?.id ?? ""]
           if (!messages) {
-            draft.message[session.id] = [optimisticMessage]
+            draft.message[session?.id ?? ""] = [optimisticMessage]
           } else {
             const result = Binary.search(messages, messageID, (m) => m.id)
             messages.splice(result.index, 0, optimisticMessage)
@@ -1272,7 +1272,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     const removeOptimisticMessage = () => {
       setSyncStore(
         produce((draft) => {
-          const messages = draft.message[session.id]
+          const messages = draft.message[session?.id ?? ""]
           if (messages) {
             const result = Binary.search(messages, messageID, (m) => m.id)
             if (result.found) messages.splice(result.index, 1)
