@@ -15,6 +15,14 @@
 
   transform-origin: var(--kb-popover-content-transform-origin);
 
+  [data-origin-top-right] {
+    transform-origin: top right;
+  }
+
+  [data-origin-top-left] {
+    transform-origin: top left;
+  }
+
   &:focus-within {
     outline: none;
   }

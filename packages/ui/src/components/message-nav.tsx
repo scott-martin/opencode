@@ -149,7 +149,7 @@ export const MessageNav = (props: MessageNavProps) => {
                       stopScrollAnimation(scrollAnimationState, titleRef)
                       scrollAnimationState = startScrollAnimation(titleRef)
                     }
-                  }, 500)
+                  }, 300)
                 }
 
                 const handleTitleMouseLeave = () => {

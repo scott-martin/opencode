@@ -15,7 +15,7 @@
 [data-slot="message-nav-list"] {
   --message-nav-item-height: 11px;
   --message-nav-item-width: 40px;
-  --message-nav-expanded-width: 240px;
+  --message-nav-expanded-width: 260px;
 
   list-style: none;
   padding: 4px;

@@ -141,7 +141,7 @@
 @keyframes selectContentShow {
   from {
     opacity: 0;
-    transform: scaleY(0.9);
+    transform: scaleY(0.95);
   }
   to {
     opacity: 1;
@@ -156,6 +156,6 @@
   }
   to {
     opacity: 0;
-    transform: scaleY(0.9);
+    transform: scaleY(0.95);
   }
 }

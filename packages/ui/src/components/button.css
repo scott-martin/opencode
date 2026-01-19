@@ -16,7 +16,7 @@
 
   &[data-variant="primary"] {
     background-color: var(--icon-strong-base);
-    border-color: var(--border-weak-base);
+    border-color: var(--border-weaker-base);
     color: var(--icon-invert-base);
 
     [data-slot="icon-svg"] {

@@ -236,6 +236,7 @@ export function SessionHeader() {
               <Show when={shareEnabled() && currentSession()}>
                 <div class="flex items-center">
                   <Popover
+                    gutter={16}
                     title="Publish on web"
                     description={
                       shareUrl()
@@ -298,7 +299,7 @@ export function SessionHeader() {
                     </div>
                   </Popover>
                   <Show when={shareUrl()} fallback={<div class="size-6" aria-hidden="true" />}>
-                    <Tooltip value={state.copied ? "Copied" : "Copy link"} placement="top" gutter={8}>
+                    <Tooltip value={state.copied ? "Copied" : "Copy link"} placement="top-end" gutter={12}>
                       <IconButton
                         icon={state.copied ? "check" : "copy"}
                         variant="secondary"
