@@ -543,7 +543,7 @@ export default function Layout(props: ParentProps) {
     running: number
   }
 
-  const prefetchChunk = 200
+  const prefetchChunk = 600
   const prefetchConcurrency = 1
   const prefetchPendingLimit = 6
   const prefetchToken = { value: 0 }
@@ -1433,10 +1433,11 @@ export default function Layout(props: ParentProps) {
                 getLabel={messageLabel}
                 onMessageSelect={(message) => {
                   if (!isActive()) {
-                    navigate(`${props.slug}/session/${props.session.id}#message-${message.id}`)
+                    sessionStorage.setItem("opencode.pendingMessage", `${props.session.id}|${message.id}`)
+                    navigate(`${props.slug}/session/${props.session.id}`)
                     return
                   }
-                  window.location.hash = `message-${message.id}`
+                  window.history.replaceState(null, "", `#message-${message.id}`)
                   window.dispatchEvent(new HashChangeEvent("hashchange"))
                 }}
                 size="normal"
@@ -1970,7 +1971,7 @@ export default function Layout(props: ParentProps) {
                             transform: "translate3d(52px, 0, 0)",
                           }}
                         >
-                          <span class="text-12-regular text-text-base truncate">
+                          <span class="text-12-regular text-text-base truncate select-text">
                             {project()?.worktree.replace(homedir(), "~")}
                           </span>
                         </Tooltip>
