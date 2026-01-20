@@ -9,6 +9,11 @@
     "opencode": {
       "options": {},
     },
+    "azure": {
+      "options": {
+        "resourceName": "alice-mi7mfgew-eastus2",
+      },
+    },
   },
   "mcp": {
     "context7": {

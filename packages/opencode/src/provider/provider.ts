@@ -142,7 +142,6 @@ export namespace Provider {
     },
     // TODO: handle the openai and anthropic deployments
     azure: async () => {
-      const resourceName = Env.get("AZURE_RESOURCE_NAME")
       return {
         autoload: false,
         async getModel(sdk: any, model: Model, options?: Record<string, any>) {
@@ -154,13 +153,10 @@ export namespace Provider {
           }
           return sdk.responses(model.api.id)
         },
-        options: {
-          baseURL: resourceName ? `https://${resourceName}.cognitiveservices.azure.com/anthropic/v1` : undefined,
-        },
+        options: {},
       }
     },
     "azure-cognitive-services": async () => {
-      const resourceName = Env.get("AZURE_COGNITIVE_SERVICES_RESOURCE_NAME")
       return {
         autoload: false,
         async getModel(sdk: any, model: Model, options?: Record<string, any>) {
@@ -172,9 +168,7 @@ export namespace Provider {
           }
           return sdk.responses(model.api.id)
         },
-        options: {
-          baseURL: resourceName ? `https://${resourceName}.cognitiveservices.azure.com/openai` : undefined,
-        },
+        options: {},
       }
     },
     "amazon-bedrock": async () => {
@@ -515,7 +509,7 @@ export namespace Provider {
       providerID: z.string(),
       api: z.object({
         id: z.string(),
-        url: z.string(),
+        url: z.string().optional(),
         npm: z.string(),
       }),
       name: z.string(),
@@ -603,7 +597,7 @@ export namespace Provider {
       family: model.family,
       api: {
         id: model.id,
-        url: provider.api!,
+        url: model.provider?.api ?? provider.api,
         npm: model.provider?.npm ?? provider.npm ?? "@ai-sdk/openai-compatible",
       },
       status: model.status ?? "active",
@@ -966,6 +960,21 @@ export namespace Provider {
     return state().then((state) => state.providers)
   }
 
+  function resolveModelBaseURL(model: Model, options: Record<string, any>): string {
+    const template = model.api?.url ?? ""
+    if (!template) return ""
+    const matches = [...template.matchAll(/{{([^}]+)}}/g)]
+    if (matches.length === 0) return template
+    return matches.reduce((url, match) => {
+      const keys = match[1].split("|").map((item) => item.trim())
+      const resolved = keys
+        .map((key) => Env.get(key) ?? options[key])
+        .find((value) => value !== undefined && value !== null && value !== "")
+      if (resolved === undefined || resolved === null || resolved === "") return url
+      return url.replaceAll(match[0], String(resolved))
+    }, template)
+  }
+
   async function getSDK(model: Model) {
     try {
       using _ = log.time("getSDK", {
@@ -979,7 +988,8 @@ export namespace Provider {
         options["includeUsage"] = true
       }
 
-      if (!options["baseURL"]) options["baseURL"] = model.api.url
+      const resolvedBaseURL = resolveModelBaseURL(model, options)
+      if (!options["baseURL"] && resolvedBaseURL) options["baseURL"] = resolvedBaseURL
       if (options["apiKey"] === undefined && provider.key) options["apiKey"] = provider.key
       if (model.headers)
         options["headers"] = {
