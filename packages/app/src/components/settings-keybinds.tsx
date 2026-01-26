@@ -8,6 +8,7 @@ import fuzzysort from "fuzzysort"
 import { formatKeybind, parseKeybind, useCommand } from "@/context/command"
 import { useLanguage } from "@/context/language"
 import { useSettings } from "@/context/settings"
+import { ScrollFade } from "@opencode-ai/ui/scroll-fade"
 
 const IS_MAC = typeof navigator === "object" && /(Mac|iPod|iPhone|iPad)/.test(navigator.platform)
 const PALETTE_ID = "command.palette"
@@ -349,7 +350,12 @@ export const SettingsKeybinds: Component = () => {
   })
 
   return (
-    <div class="flex flex-col h-full overflow-y-auto no-scrollbar" style={{ padding: "0 40px 40px 40px" }}>
+    <ScrollFade
+      direction="vertical"
+      fadeStartSize={0}
+      fadeEndSize={16}
+      class="flex flex-col h-full overflow-y-auto no-scrollbar p-[40px] pt-0"
+    >
       <div
         class="sticky top-0 z-10"
         style={{
@@ -432,6 +438,6 @@ export const SettingsKeybinds: Component = () => {
           </div>
         </Show>
       </div>
-    </div>
+    </ScrollFade>
   )
 }

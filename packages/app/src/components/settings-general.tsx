@@ -6,6 +6,7 @@ import { useLanguage } from "@/context/language"
 import { useSettings, monoFontFamily } from "@/context/settings"
 import { playSound, SOUND_OPTIONS } from "@/utils/sound"
 import { Link } from "./link"
+import { ScrollFade } from "@opencode-ai/ui/scroll-fade"
 
 export const SettingsGeneral: Component = () => {
   const theme = useTheme()
@@ -48,7 +49,12 @@ export const SettingsGeneral: Component = () => {
   const soundOptions = [...SOUND_OPTIONS]
 
   return (
-    <div class="flex flex-col h-full overflow-y-auto no-scrollbar" style={{ padding: "0 40px 40px 40px" }}>
+    <ScrollFade
+      direction="vertical"
+      fadeStartSize={0}
+      fadeEndSize={16}
+      class="flex flex-col h-full overflow-y-auto no-scrollbar p-[40px] pt-0"
+    >
       <div
         class="sticky top-0 z-10"
         style={{
@@ -274,7 +280,7 @@ export const SettingsGeneral: Component = () => {
           </div>
         </div>
       </div>
-    </div>
+    </ScrollFade>
   )
 }
 
