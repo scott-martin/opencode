@@ -583,25 +583,44 @@ export function Autocomplete(props: {
     })
   })
 
+  const promptPosition = createMemo(() => sync.data.config.tui?.prompt_position ?? "bottom")
+
   const height = createMemo(() => {
     const count = options().length || 1
     if (!store.visible) return Math.min(10, count)
     positionTick()
-    return Math.min(10, count, Math.max(1, props.anchor().y))
+    const anchor = props.anchor()
+    if (promptPosition() === "top" && anchor) {
+      // When prompt is at top, show dropdown below - limit by remaining space
+      const anchorHeight = anchor.height ?? 0
+      return Math.min(10, count, Math.max(1, dimensions().height - anchor.y - anchorHeight - 1))
+    }
+    return Math.min(10, count, Math.max(1, anchor?.y ?? 10))
   })
 
   let scroll: ScrollBoxRenderable
+
+  const top = createMemo(() => {
+    const anchor = props.anchor()
+    if (promptPosition() === "top" && anchor) {
+      // Position below the anchor
+      return position().y + (anchor.height ?? 0)
+    }
+    // Position above the anchor (default)
+    return position().y - height()
+  })
 
   return (
     <box
       visible={store.visible !== false}
       position="absolute"
-      top={position().y - height()}
+      top={top()}
       left={position().x}
       width={position().width}
-      zIndex={100}
-      {...SplitBorder}
-      borderColor={theme.border}
+      zIndex={2000}
+      border={true}
+      borderColor={theme.borderActive}
+      backgroundColor={theme.backgroundMenu}
     >
       <scrollbox
         ref={(r: ScrollBoxRenderable) => (scroll = r)}
@@ -621,7 +640,7 @@ export function Autocomplete(props: {
             <box
               paddingLeft={1}
               paddingRight={1}
-              backgroundColor={index === store.selected ? theme.primary : undefined}
+              backgroundColor={index === store.selected ? theme.primary : theme.backgroundMenu}
               flexDirection="row"
               onMouseMove={() => {
                 setStore("input", "mouse")

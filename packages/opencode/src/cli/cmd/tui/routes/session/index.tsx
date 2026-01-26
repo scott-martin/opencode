@@ -96,6 +96,7 @@ const context = createContext<{
   showTimestamps: () => boolean
   showDetails: () => boolean
   diffWrapMode: () => "word" | "none"
+  messageFlow: () => "up" | "down"
   sync: ReturnType<typeof useSync>
 }>()
 
@@ -159,6 +160,12 @@ export function Session() {
   const showTimestamps = createMemo(() => timestamps() === "show")
   const contentWidth = createMemo(() => dimensions().width - (sidebarVisible() ? 42 : 0) - 4)
 
+  // Layout configuration
+  const promptPosition = createMemo(() => sync.data.config.tui?.prompt_position ?? "bottom")
+  const messageFlow = createMemo(() => sync.data.config.tui?.message_flow ?? "up")
+  const headerPosition = createMemo(() => sync.data.config.tui?.header_position ?? "top")
+  const statusPosition = createMemo(() => sync.data.config.tui?.status_position ?? "bottom")
+
   const scrollAcceleration = createMemo(() => {
     const tui = sync.data.config.tui
     if (tui?.scroll_acceleration?.enabled) {
@@ -175,7 +182,7 @@ export function Session() {
     await sync.session
       .sync(route.sessionID)
       .then(() => {
-        if (scroll) scroll.scrollBy(100_000)
+        toLatest()
       })
       .catch((e) => {
         console.error(e)
@@ -273,9 +280,12 @@ export function Session() {
     dialog.clear()
   }
 
-  function toBottom() {
+  function toLatest() {
     setTimeout(() => {
-      if (scroll) scroll.scrollTo(scroll.scrollHeight)
+      if (!scroll) return
+      // When flow is "down", newest is at top and stickyStart="top" keeps it visible
+      if (messageFlow() === "down") return
+      scroll.scrollTo(scroll.scrollHeight)
     }, 50)
   }
 
@@ -444,7 +454,7 @@ export function Session() {
             messageID: message.id,
           })
           .then(() => {
-            toBottom()
+            toLatest()
           })
         const parts = sync.data.part[message.id]
         prompt.set(
@@ -632,7 +642,8 @@ export function Session() {
       category: "Session",
       hidden: true,
       onSelect: (dialog) => {
-        scroll.scrollTo(0)
+        // First (oldest) is at top normally, but at bottom when flow is "down"
+        scroll.scrollTo(messageFlow() === "down" ? scroll.scrollHeight : 0)
         dialog.clear()
       },
     },
@@ -643,7 +654,8 @@ export function Session() {
       category: "Session",
       hidden: true,
       onSelect: (dialog) => {
-        scroll.scrollTo(scroll.scrollHeight)
+        // Last (newest) is at bottom normally, but at top when flow is "down"
+        if (messageFlow() !== "down") scroll.scrollTo(scroll.scrollHeight)
         dialog.clear()
       },
     },
@@ -919,8 +931,8 @@ export function Session() {
   const dialog = useDialog()
   const renderer = useRenderer()
 
-  // snap to bottom when session changes
-  createEffect(on(() => route.sessionID, toBottom))
+  // snap to latest message when session changes
+  createEffect(on(() => route.sessionID, toLatest))
 
   return (
     <context.Provider
@@ -934,15 +946,47 @@ export function Session() {
         showTimestamps,
         showDetails,
         diffWrapMode,
+        messageFlow,
         sync,
       }}
     >
       <box flexDirection="row">
         <box flexGrow={1} paddingBottom={1} paddingTop={1} paddingLeft={2} paddingRight={2} gap={1}>
           <Show when={session()}>
-            <Show when={!sidebarVisible() || !wide()}>
+            {/* Top section */}
+            <Show when={headerPosition() === "top" && (!sidebarVisible() || !wide())}>
               <Header />
             </Show>
+            <Show when={statusPosition() === "top"}>
+              <Footer />
+            </Show>
+            <Show when={promptPosition() === "top"}>
+              <box flexShrink={0} zIndex={1000}>
+                <Show when={permissions().length > 0}>
+                  <PermissionPrompt request={permissions()[0]} />
+                </Show>
+                <Show when={permissions().length === 0 && questions().length > 0}>
+                  <QuestionPrompt request={questions()[0]} />
+                </Show>
+                <Prompt
+                  visible={!session()?.parentID && permissions().length === 0 && questions().length === 0}
+                  ref={(r) => {
+                    prompt = r
+                    promptRef.set(r)
+                    if (route.initialPrompt) {
+                      r.set(route.initialPrompt)
+                    }
+                  }}
+                  disabled={permissions().length > 0 || questions().length > 0}
+                  onSubmit={() => {
+                    toLatest()
+                  }}
+                  sessionID={route.sessionID}
+                />
+              </box>
+            </Show>
+
+            {/* Messages */}
             <scrollbox
               ref={(r) => (scroll = r)}
               viewportOptions={{
@@ -957,11 +1001,11 @@ export function Session() {
                 },
               }}
               stickyScroll={true}
-              stickyStart="bottom"
+              stickyStart={messageFlow() === "down" ? "top" : "bottom"}
               flexGrow={1}
               scrollAcceleration={scrollAcceleration()}
             >
-              <For each={messages()}>
+              <For each={messageFlow() === "down" ? messages().toReversed() : messages()}>
                 {(message, index) => (
                   <Switch>
                     <Match when={message.id === revert()?.messageID}>
@@ -1057,30 +1101,39 @@ export function Session() {
                 )}
               </For>
             </scrollbox>
-            <box flexShrink={0}>
-              <Show when={permissions().length > 0}>
-                <PermissionPrompt request={permissions()[0]} />
-              </Show>
-              <Show when={permissions().length === 0 && questions().length > 0}>
-                <QuestionPrompt request={questions()[0]} />
-              </Show>
-              <Prompt
-                visible={!session()?.parentID && permissions().length === 0 && questions().length === 0}
-                ref={(r) => {
-                  prompt = r
-                  promptRef.set(r)
-                  // Apply initial prompt when prompt component mounts (e.g., from fork)
-                  if (route.initialPrompt) {
-                    r.set(route.initialPrompt)
-                  }
-                }}
-                disabled={permissions().length > 0 || questions().length > 0}
-                onSubmit={() => {
-                  toBottom()
-                }}
-                sessionID={route.sessionID}
-              />
-            </box>
+
+            {/* Bottom section */}
+            <Show when={promptPosition() === "bottom"}>
+              <box flexShrink={0}>
+                <Show when={permissions().length > 0}>
+                  <PermissionPrompt request={permissions()[0]} />
+                </Show>
+                <Show when={permissions().length === 0 && questions().length > 0}>
+                  <QuestionPrompt request={questions()[0]} />
+                </Show>
+                <Prompt
+                  visible={!session()?.parentID && permissions().length === 0 && questions().length === 0}
+                  ref={(r) => {
+                    prompt = r
+                    promptRef.set(r)
+                    if (route.initialPrompt) {
+                      r.set(route.initialPrompt)
+                    }
+                  }}
+                  disabled={permissions().length > 0 || questions().length > 0}
+                  onSubmit={() => {
+                    toLatest()
+                  }}
+                  sessionID={route.sessionID}
+                />
+              </box>
+            </Show>
+            <Show when={statusPosition() === "bottom"}>
+              <Footer />
+            </Show>
+            <Show when={headerPosition() === "bottom" && (!sidebarVisible() || !wide())}>
+              <Header />
+            </Show>
           </Show>
           <Toast />
         </box>
@@ -1219,6 +1272,7 @@ function AssistantMessage(props: { message: AssistantMessage; parts: Part[]; las
   const local = useLocal()
   const { theme } = useTheme()
   const sync = useSync()
+  const ctx = use()
   const messages = createMemo(() => sync.data.message[props.message.sessionID] ?? [])
 
   const final = createMemo(() => {
@@ -1233,63 +1287,85 @@ function AssistantMessage(props: { message: AssistantMessage; parts: Part[]; las
     return props.message.time.completed - user.time.created
   })
 
-  return (
-    <>
-      <For each={props.parts}>
-        {(part, index) => {
-          const component = createMemo(() => PART_MAPPING[part.type as keyof typeof PART_MAPPING])
-          return (
-            <Show when={component()}>
-              <Dynamic
-                last={index() === props.parts.length - 1}
-                component={component()}
-                part={part as any}
-                message={props.message}
-              />
+  const statusLine = (
+    <Switch>
+      <Match when={props.last || final() || props.message.error?.name === "MessageAbortedError"}>
+        <box paddingLeft={3}>
+          <text marginTop={1}>
+            <span
+              style={{
+                fg:
+                  props.message.error?.name === "MessageAbortedError"
+                    ? theme.textMuted
+                    : local.agent.color(props.message.agent),
+              }}
+            >
+              ▣{" "}
+            </span>{" "}
+            <span style={{ fg: theme.text }}>{Locale.titlecase(props.message.mode)}</span>
+            <span style={{ fg: theme.textMuted }}> · {props.message.modelID}</span>
+            <Show when={duration()}>
+              <span style={{ fg: theme.textMuted }}> · {Locale.duration(duration())}</span>
             </Show>
-          )
-        }}
-      </For>
-      <Show when={props.message.error && props.message.error.name !== "MessageAbortedError"}>
-        <box
-          border={["left"]}
-          paddingTop={1}
-          paddingBottom={1}
-          paddingLeft={2}
-          marginTop={1}
-          backgroundColor={theme.backgroundPanel}
-          customBorderChars={SplitBorder.customBorderChars}
-          borderColor={theme.error}
-        >
-          <text fg={theme.textMuted}>{props.message.error?.data.message}</text>
+            <Show when={props.message.error?.name === "MessageAbortedError"}>
+              <span style={{ fg: theme.textMuted }}> · interrupted</span>
+            </Show>
+          </text>
         </box>
-      </Show>
-      <Switch>
-        <Match when={props.last || final() || props.message.error?.name === "MessageAbortedError"}>
-          <box paddingLeft={3}>
-            <text marginTop={1}>
-              <span
-                style={{
-                  fg:
-                    props.message.error?.name === "MessageAbortedError"
-                      ? theme.textMuted
-                      : local.agent.color(props.message.agent),
-                }}
-              >
-                ▣{" "}
-              </span>{" "}
-              <span style={{ fg: theme.text }}>{Locale.titlecase(props.message.mode)}</span>
-              <span style={{ fg: theme.textMuted }}> · {props.message.modelID}</span>
-              <Show when={duration()}>
-                <span style={{ fg: theme.textMuted }}> · {Locale.duration(duration())}</span>
-              </Show>
-              <Show when={props.message.error?.name === "MessageAbortedError"}>
-                <span style={{ fg: theme.textMuted }}> · interrupted</span>
-              </Show>
-            </text>
-          </box>
-        </Match>
-      </Switch>
+      </Match>
+    </Switch>
+  )
+
+  const errorBox = (
+    <Show when={props.message.error && props.message.error.name !== "MessageAbortedError"}>
+      <box
+        border={["left"]}
+        paddingTop={1}
+        paddingBottom={1}
+        paddingLeft={2}
+        marginTop={1}
+        backgroundColor={theme.backgroundPanel}
+        customBorderChars={SplitBorder.customBorderChars}
+        borderColor={theme.error}
+      >
+        <text fg={theme.textMuted}>{props.message.error?.data.message}</text>
+      </box>
+    </Show>
+  )
+
+  const partsToRender = createMemo(() => 
+    ctx.messageFlow() === "down" ? [...props.parts].reverse() : props.parts
+  )
+
+  const parts = (
+    <For each={partsToRender()}>
+      {(part, index) => {
+        const component = createMemo(() => PART_MAPPING[part.type as keyof typeof PART_MAPPING])
+        return (
+          <Show when={component()}>
+            <Dynamic
+              last={index() === partsToRender().length - 1}
+              component={component()}
+              part={part as any}
+              message={props.message}
+            />
+          </Show>
+        )
+      }}
+    </For>
+  )
+
+  return ctx.messageFlow() === "down" ? (
+    <>
+      {statusLine}
+      {errorBox}
+      {parts}
+    </>
+  ) : (
+    <>
+      {parts}
+      {errorBox}
+      {statusLine}
     </>
   )
 }

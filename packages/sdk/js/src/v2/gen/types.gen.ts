@@ -1617,6 +1617,22 @@ export type Config = {
      * Control diff rendering style: 'auto' adapts to terminal width, 'stacked' always shows single column
      */
     diff_style?: "auto" | "stacked"
+    /**
+     * Position of input prompt: 'bottom' (default) or 'top'
+     */
+    prompt_position?: "bottom" | "top"
+    /**
+     * Direction messages flow: 'up' (default, new at bottom) or 'down' (new at top)
+     */
+    message_flow?: "up" | "down"
+    /**
+     * Position of session header: 'top' (default) or 'bottom'
+     */
+    header_position?: "top" | "bottom"
+    /**
+     * Position of status bar: 'bottom' (default) or 'top'
+     */
+    status_position?: "bottom" | "top"
   }
   server?: ServerConfig
   /**
@@ -1766,6 +1782,10 @@ export type Config = {
      */
     prune?: boolean
   }
+  /**
+   * Index all files in home directory using ripgrep (default: false)
+   */
+  indexHome?: boolean
   experimental?: {
     hook?: {
       file_edited?: {

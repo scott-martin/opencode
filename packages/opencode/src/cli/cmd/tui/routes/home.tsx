@@ -42,6 +42,10 @@ export function Home() {
     return !tipsHidden()
   })
 
+  // Layout configuration
+  const promptPosition = createMemo(() => sync.data.config.tui?.prompt_position ?? "bottom")
+  const statusPosition = createMemo(() => sync.data.config.tui?.status_position ?? "bottom")
+
   command.register(() => [
     {
       title: tipsHidden() ? "Show tips" : "Hide tips",
@@ -91,20 +95,64 @@ export function Home() {
 
   const keybind = useKeybind()
 
+  const statusBar = (
+    <box paddingTop={1} paddingBottom={1} paddingLeft={2} paddingRight={2} flexDirection="row" flexShrink={0} gap={2}>
+      <text fg={theme.textMuted}>{directory()}</text>
+      <box gap={1} flexDirection="row" flexShrink={0}>
+        <Show when={mcp()}>
+          <text fg={theme.text}>
+            <Switch>
+              <Match when={mcpError()}>
+                <span style={{ fg: theme.error }}>⊙ </span>
+              </Match>
+              <Match when={true}>
+                <span style={{ fg: connectedMcpCount() > 0 ? theme.success : theme.textMuted }}>⊙ </span>
+              </Match>
+            </Switch>
+            {connectedMcpCount()} MCP
+          </text>
+          <text fg={theme.textMuted}>/status</text>
+        </Show>
+      </box>
+      <box flexGrow={1} />
+      <box flexShrink={0}>
+        <text fg={theme.textMuted}>{Installation.VERSION}</text>
+      </box>
+    </box>
+  )
+
   return (
     <>
+      <Show when={statusPosition() === "top"}>{statusBar}</Show>
+
       <box flexGrow={1} justifyContent="center" alignItems="center" paddingLeft={2} paddingRight={2} gap={1}>
-        <box height={3} />
+        <Show when={promptPosition() === "top"}>
+          <box width="100%" maxWidth={75} zIndex={1000}>
+            <Prompt
+              ref={(r) => {
+                prompt = r
+                promptRef.set(r)
+              }}
+              hint={Hint}
+            />
+          </box>
+          <box height={3} />
+        </Show>
+
         <Logo />
-        <box width="100%" maxWidth={75} zIndex={1000} paddingTop={1}>
-          <Prompt
-            ref={(r) => {
-              prompt = r
-              promptRef.set(r)
-            }}
-            hint={Hint}
-          />
-        </box>
+
+        <Show when={promptPosition() === "bottom"}>
+          <box width="100%" maxWidth={75} zIndex={1000} paddingTop={1}>
+            <Prompt
+              ref={(r) => {
+                prompt = r
+                promptRef.set(r)
+              }}
+              hint={Hint}
+            />
+          </box>
+        </Show>
+
         <box height={3} width="100%" maxWidth={75} alignItems="center" paddingTop={2}>
           <Show when={showTips()}>
             <Tips />
@@ -112,29 +160,8 @@ export function Home() {
         </box>
         <Toast />
       </box>
-      <box paddingTop={1} paddingBottom={1} paddingLeft={2} paddingRight={2} flexDirection="row" flexShrink={0} gap={2}>
-        <text fg={theme.textMuted}>{directory()}</text>
-        <box gap={1} flexDirection="row" flexShrink={0}>
-          <Show when={mcp()}>
-            <text fg={theme.text}>
-              <Switch>
-                <Match when={mcpError()}>
-                  <span style={{ fg: theme.error }}>⊙ </span>
-                </Match>
-                <Match when={true}>
-                  <span style={{ fg: connectedMcpCount() > 0 ? theme.success : theme.textMuted }}>⊙ </span>
-                </Match>
-              </Switch>
-              {connectedMcpCount()} MCP
-            </text>
-            <text fg={theme.textMuted}>/status</text>
-          </Show>
-        </box>
-        <box flexGrow={1} />
-        <box flexShrink={0}>
-          <text fg={theme.textMuted}>{Installation.VERSION}</text>
-        </box>
-      </box>
+
+      <Show when={statusPosition() === "bottom"}>{statusBar}</Show>
     </>
   )
 }

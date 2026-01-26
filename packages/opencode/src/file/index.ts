@@ -12,6 +12,7 @@ import { Instance } from "../project/instance"
 import { Ripgrep } from "./ripgrep"
 import fuzzysort from "fuzzysort"
 import { Global } from "../global"
+import { Config } from "../config/config"
 
 export namespace File {
   const log = Log.create({ service: "file" })
@@ -124,7 +125,8 @@ export namespace File {
     let cache: Entry = { files: [], dirs: [] }
     let fetching = false
 
-    const isGlobalHome = Instance.directory === Global.Path.home && Instance.project.id === "global"
+    const config = await Config.get()
+    const isGlobalHome = Instance.directory === Global.Path.home && Instance.project.id === "global" && !config.indexHome
 
     const fn = async (result: Entry) => {
       // Disable scanning if in root of file system

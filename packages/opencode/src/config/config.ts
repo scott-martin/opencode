@@ -810,6 +810,22 @@ export namespace Config {
       .enum(["auto", "stacked"])
       .optional()
       .describe("Control diff rendering style: 'auto' adapts to terminal width, 'stacked' always shows single column"),
+    prompt_position: z
+      .enum(["bottom", "top"])
+      .optional()
+      .describe("Position of input prompt: 'bottom' (default) or 'top'"),
+    message_flow: z
+      .enum(["up", "down"])
+      .optional()
+      .describe("Direction messages flow: 'up' (default, new at bottom) or 'down' (new at top)"),
+    header_position: z
+      .enum(["top", "bottom"])
+      .optional()
+      .describe("Position of session header: 'top' (default) or 'bottom'"),
+    status_position: z
+      .enum(["bottom", "top"])
+      .optional()
+      .describe("Position of status bar: 'bottom' (default) or 'top'"),
   })
 
   export const Server = z
@@ -1044,6 +1060,7 @@ export namespace Config {
           prune: z.boolean().optional().describe("Enable pruning of old tool outputs (default: true)"),
         })
         .optional(),
+      indexHome: z.boolean().optional().describe("Index all files in home directory using ripgrep (default: false)"),
       experimental: z
         .object({
           hook: z

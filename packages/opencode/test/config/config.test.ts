@@ -1413,6 +1413,78 @@ describe("deduplicatePlugins", () => {
   })
 })
 
+test("handles TUI layout configuration", async () => {
+  await using tmp = await tmpdir({
+    init: async (dir) => {
+      await Bun.write(
+        path.join(dir, "opencode.json"),
+        JSON.stringify({
+          $schema: "https://opencode.ai/config.json",
+          tui: {
+            prompt_position: "top",
+            message_flow: "down",
+            header_position: "top",
+            status_position: "top",
+          },
+        }),
+      )
+    },
+  })
+  await Instance.provide({
+    directory: tmp.path,
+    fn: async () => {
+      const config = await Config.get()
+      expect(config.tui?.prompt_position).toBe("top")
+      expect(config.tui?.message_flow).toBe("down")
+      expect(config.tui?.header_position).toBe("top")
+      expect(config.tui?.status_position).toBe("top")
+    },
+  })
+})
+
+test("handles indexHome configuration", async () => {
+  await using tmp = await tmpdir({
+    init: async (dir) => {
+      await Bun.write(
+        path.join(dir, "opencode.json"),
+        JSON.stringify({
+          $schema: "https://opencode.ai/config.json",
+          indexHome: true,
+        }),
+      )
+    },
+  })
+  await Instance.provide({
+    directory: tmp.path,
+    fn: async () => {
+      const config = await Config.get()
+      expect(config.indexHome).toBe(true)
+    },
+  })
+})
+
+test("rejects invalid TUI layout values", async () => {
+  await using tmp = await tmpdir({
+    init: async (dir) => {
+      await Bun.write(
+        path.join(dir, "opencode.json"),
+        JSON.stringify({
+          $schema: "https://opencode.ai/config.json",
+          tui: {
+            prompt_position: "invalid",
+          },
+        }),
+      )
+    },
+  })
+  await Instance.provide({
+    directory: tmp.path,
+    fn: async () => {
+      await expect(Config.get()).rejects.toThrow()
+    },
+  })
+})
+
 describe("OPENCODE_DISABLE_PROJECT_CONFIG", () => {
   test("skips project config files when flag is set", async () => {
     const originalEnv = process.env["OPENCODE_DISABLE_PROJECT_CONFIG"]
