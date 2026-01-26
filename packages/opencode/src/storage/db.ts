@@ -108,7 +108,7 @@ export namespace Database {
     }
   }
 
-  export function effect(fn: () => void | Promise<void>) {
+  export function effect(fn: () => any | Promise<any>) {
     try {
       ctx.use().effects.push(fn)
     } catch {
