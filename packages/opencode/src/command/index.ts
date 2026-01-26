@@ -4,6 +4,7 @@ import { Config } from "../config/config"
 import { Instance } from "../project/instance"
 import { Identifier } from "../id/id"
 import PROMPT_INITIALIZE from "./template/initialize.txt"
+import PROMPT_LEARN from "./template/learn.txt"
 import PROMPT_REVIEW from "./template/review.txt"
 import { MCP } from "../mcp"
 
@@ -53,6 +54,7 @@ export namespace Command {
   export const Default = {
     INIT: "init",
     REVIEW: "review",
+    LEARN: "learn",
   } as const
 
   const state = Instance.state(async () => {
@@ -75,6 +77,15 @@ export namespace Command {
         },
         subtask: true,
         hints: hints(PROMPT_REVIEW),
+      },
+      [Default.LEARN]: {
+        name: Default.LEARN,
+        description: "create/update scoped AGENTS.md files after a session",
+        get template() {
+          return PROMPT_LEARN.replace("${path}", Instance.worktree)
+        },
+        subtask: true,
+        hints: hints(PROMPT_LEARN),
       },
     }
 
