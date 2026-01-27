@@ -1382,7 +1382,11 @@ function ReasoningPart(props: { last: boolean; part: ReasoningPart; message: Ass
   const content = createMemo(() => {
     // Filter out redacted reasoning chunks from OpenRouter
     // OpenRouter sends encrypted reasoning data that appears as [REDACTED]
-    return props.part.text.replace("[REDACTED]", "").trim()
+    const text = props.part.text.replace("[REDACTED]", "").trim()
+    if (ctx.messageFlow() === "down") {
+      return text.split("\n").reverse().join("\n")
+    }
+    return text
   })
   return (
     <Show when={content() && ctx.showThinking()}>
@@ -1412,6 +1416,13 @@ function ReasoningPart(props: { last: boolean; part: ReasoningPart; message: Ass
 function TextPart(props: { last: boolean; part: TextPart; message: AssistantMessage }) {
   const ctx = use()
   const { theme, syntax } = useTheme()
+  const content = createMemo(() => {
+    const text = props.part.text.trim()
+    if (ctx.messageFlow() === "down") {
+      return text.split("\n").reverse().join("\n")
+    }
+    return text
+  })
   return (
     <Show when={props.part.text.trim()}>
       <box id={"text-" + props.part.id} paddingLeft={3} marginTop={1} flexShrink={0}>
@@ -1425,7 +1436,7 @@ function TextPart(props: { last: boolean; part: TextPart; message: AssistantMess
               drawUnstyledText={false}
               streaming={true}
               syntaxStyle={syntax()}
-              content={props.part.text.trim()}
+              content={content()ß}
               conceal={ctx.conceal()}
               fg={theme.text}
             />
