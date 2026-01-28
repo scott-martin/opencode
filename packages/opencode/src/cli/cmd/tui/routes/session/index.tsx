@@ -1379,12 +1379,14 @@ const PART_MAPPING = {
 function ReasoningPart(props: { last: boolean; part: ReasoningPart; message: AssistantMessage }) {
   const { theme, subtleSyntax } = useTheme()
   const ctx = use()
+  const dimensions = useTerminalDimensions()
   const content = createMemo(() => {
     // Filter out redacted reasoning chunks from OpenRouter
     // OpenRouter sends encrypted reasoning data that appears as [REDACTED]
     const text = props.part.text.replace("[REDACTED]", "").trim()
     if (ctx.messageFlow() === "down") {
-      return reverseTextPreservingCodeBlocks(text)
+      const maxWidth = dimensions().width - 10 // Account for padding and margins
+      return reverseTextPreservingCodeBlocks(text, maxWidth)
     }
     return text
   })
@@ -1398,7 +1400,6 @@ function ReasoningPart(props: { last: boolean; part: ReasoningPart; message: Ass
         border={["left"]}
         customBorderChars={SplitBorder.customBorderChars}
         borderColor={theme.backgroundElement}
-        justifyContent={ctx.messageFlow() === "down" ? "flex-end" : undefined}
       >
         <code
           filetype="markdown"
@@ -1414,11 +1415,25 @@ function ReasoningPart(props: { last: boolean; part: ReasoningPart; message: Ass
   )
 }
 
-function reverseTextPreservingCodeBlocks(text: string): string {
+function getVisualWidth(line: string): number {
+  // Strip ANSI codes and markdown for approximate visual width
+  return line
+    .replace(/\x1b\[[0-9;]*m/g, '') // Remove ANSI codes
+    .replace(/[*_`]/g, '') // Remove basic markdown
+    .length
+}
+
+function reverseTextPreservingCodeBlocks(text: string, maxWidth?: number): string {
   const lines = text.split("\n")
   const result: string[] = []
   const codeBlockStack: string[][] = []
   let inCodeBlock = false
+  
+  // Find max line width if we're aligning
+  let actualMaxWidth = maxWidth
+  if (maxWidth) {
+    actualMaxWidth = Math.min(maxWidth, Math.max(...lines.map(getVisualWidth)))
+  }
   
   for (let i = lines.length - 1; i >= 0; i--) {
     const line = lines[i]
@@ -1427,7 +1442,7 @@ function reverseTextPreservingCodeBlocks(text: string): string {
       if (inCodeBlock) {
         // End of code block (when reading backwards) - push the closing fence
         codeBlockStack[codeBlockStack.length - 1].unshift(line)
-        // Flush the code block in correct order
+        // Flush the code block in correct order (no padding for code blocks)
         result.push(...codeBlockStack.pop()!)
         inCodeBlock = false
       } else {
@@ -1439,8 +1454,14 @@ function reverseTextPreservingCodeBlocks(text: string): string {
       // Collect code block lines in original order
       codeBlockStack[codeBlockStack.length - 1].unshift(line)
     } else {
-      // Regular text - add reversed
-      result.push(line)
+      // Regular text - add reversed and right-aligned if maxWidth provided
+      if (actualMaxWidth && line.trim()) {
+        const visualWidth = getVisualWidth(line)
+        const padding = Math.max(0, actualMaxWidth - visualWidth)
+        result.push(' '.repeat(padding) + line)
+      } else {
+        result.push(line)
+      }
     }
   }
   
@@ -1450,10 +1471,12 @@ function reverseTextPreservingCodeBlocks(text: string): string {
 function TextPart(props: { last: boolean; part: TextPart; message: AssistantMessage }) {
   const ctx = use()
   const { theme, syntax } = useTheme()
+  const dimensions = useTerminalDimensions()
   const content = createMemo(() => {
     const text = props.part.text.trim()
     if (ctx.messageFlow() === "down") {
-      return reverseTextPreservingCodeBlocks(text)
+      const maxWidth = dimensions().width - 10 // Account for padding and margins
+      return reverseTextPreservingCodeBlocks(text, maxWidth)
     }
     return text
   })
@@ -1464,7 +1487,6 @@ function TextPart(props: { last: boolean; part: TextPart; message: AssistantMess
         paddingLeft={3} 
         marginTop={1} 
         flexShrink={0}
-        justifyContent={ctx.messageFlow() === "down" ? "flex-end" : undefined}
       >
         <Switch>
           <Match when={Flag.OPENCODE_EXPERIMENTAL_MARKDOWN}>
