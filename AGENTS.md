@@ -3,6 +3,18 @@
 - The default branch in this repo is `dev`.
 - Scott runs a locally built version. After making changes, run `bun run build` in `packages/opencode/` before testing.
 
+## Git Workflow
+
+This is Scott's personal fork. It will not be merged upstream.
+
+- **Push changes**: Just `git push` (or `git push --force` if diverged)
+- **Pull upstream changes**: Use merge, not rebase:
+  ```bash
+  git fetch upstream && git merge upstream/main
+  ```
+  Merge avoids re-resolving the same conflicts every time. Rebase replays commits and hits conflicts repeatedly.
+- **Upstream remote**: `https://github.com/anthropics/opencode.git` (add with `git remote add upstream <url>` if missing)
+
 ## Style Guide
 
 - Keep things in one function unless composable or reusable
