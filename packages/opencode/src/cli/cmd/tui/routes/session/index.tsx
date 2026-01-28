@@ -1398,6 +1398,7 @@ function ReasoningPart(props: { last: boolean; part: ReasoningPart; message: Ass
         border={["left"]}
         customBorderChars={SplitBorder.customBorderChars}
         borderColor={theme.backgroundElement}
+        justifyContent={ctx.messageFlow() === "down" ? "flex-end" : undefined}
       >
         <code
           filetype="markdown"
@@ -1458,7 +1459,13 @@ function TextPart(props: { last: boolean; part: TextPart; message: AssistantMess
   })
   return (
     <Show when={props.part.text.trim()}>
-      <box id={"text-" + props.part.id} paddingLeft={3} marginTop={1} flexShrink={0}>
+      <box 
+        id={"text-" + props.part.id} 
+        paddingLeft={3} 
+        marginTop={1} 
+        flexShrink={0}
+        justifyContent={ctx.messageFlow() === "down" ? "flex-end" : undefined}
+      >
         <Switch>
           <Match when={Flag.OPENCODE_EXPERIMENTAL_MARKDOWN}>
             <markdown syntaxStyle={syntax()} content={props.part.text.trim()} conceal={ctx.conceal()} />
