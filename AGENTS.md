@@ -1,6 +1,7 @@
 - To regenerate the JavaScript SDK, run `./packages/sdk/js/script/build.ts`.
 - ALWAYS USE PARALLEL TOOLS WHEN APPLICABLE.
 - The default branch in this repo is `dev`.
+- Scott runs a locally built version. After making changes, run `bun run build` in `packages/opencode/` before testing.
 
 ## Style Guide
 

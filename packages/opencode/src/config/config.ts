@@ -1060,6 +1060,11 @@ export namespace Config {
           prune: z.boolean().optional().describe("Enable pruning of old tool outputs (default: true)"),
         })
         .optional(),
+      title: z
+        .object({
+          auto: z.boolean().optional().describe("Automatically regenerate session title as conversation evolves (default: true)"),
+        })
+        .optional(),
       indexHome: z.boolean().optional().describe("Index all files in home directory using ripgrep (default: false)"),
       experimental: z
         .object({

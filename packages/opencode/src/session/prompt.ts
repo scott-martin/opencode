@@ -1775,50 +1775,83 @@ NOTE: At any point in time through this workflow you should feel free to ask the
     const subtaskParts = firstRealUser.parts.filter((p) => p.type === "subtask") as MessageV2.SubtaskPart[]
     const hasOnlySubtaskParts = subtaskParts.length > 0 && firstRealUser.parts.every((p) => p.type === "subtask")
 
+    const messages = hasOnlySubtaskParts
+      ? [{ role: "user" as const, content: subtaskParts.map((p) => p.prompt).join("\n") }]
+      : undefined
+
+    await generateTitle({
+      sessionID: input.session.id,
+      user: firstRealUser.info as MessageV2.User,
+      history: contextMessages,
+      providerID: input.providerID,
+      modelID: input.modelID,
+      messages,
+    })
+  }
+
+  export async function generateTitle(input: {
+    sessionID: string
+    user?: MessageV2.User
+    history?: MessageV2.WithParts[]
+    providerID?: string
+    modelID?: string
+    messages?: { role: "user" | "assistant"; content: string }[]
+  }): Promise<string | undefined> {
+    const history = input.history ?? (await Session.messages({ sessionID: input.sessionID, limit: 6 }))
+    if (history.length === 0) return
+
+    const lastUser = input.user ?? ([...history].reverse().find((m) => m.info.role === "user")?.info as MessageV2.User)
+    if (!lastUser) return
+
+    const providerID = input.providerID ?? lastUser.model.providerID
+    const modelID = input.modelID ?? lastUser.model.modelID
+
     const agent = await Agent.get("title")
     if (!agent) return
+
     const model = await iife(async () => {
       if (agent.model) return await Provider.getModel(agent.model.providerID, agent.model.modelID)
-      return (
-        (await Provider.getSmallModel(input.providerID)) ?? (await Provider.getModel(input.providerID, input.modelID))
-      )
+      return (await Provider.getSmallModel(providerID)) ?? (await Provider.getModel(providerID, modelID))
     })
+
     const result = await LLM.stream({
       agent,
-      user: firstRealUser.info as MessageV2.User,
+      user: lastUser,
       system: [],
       small: true,
       tools: {},
       model,
       abort: new AbortController().signal,
-      sessionID: input.session.id,
+      sessionID: input.sessionID,
       retries: 2,
       messages: [
         {
           role: "user",
           content: "Generate a title for this conversation:\n",
         },
-        ...(hasOnlySubtaskParts
-          ? [{ role: "user" as const, content: subtaskParts.map((p) => p.prompt).join("\n") }]
-          : MessageV2.toModelMessages(contextMessages, model)),
+        ...(input.messages ?? MessageV2.toModelMessages(history, model)),
       ],
     })
-    const text = await result.text.catch((err) => log.error("failed to generate title", { error: err }))
-    if (text)
-      return Session.update(
-        input.session.id,
-        (draft) => {
-          const cleaned = text
-            .replace(/<think>[\s\S]*?<\/think>\s*/g, "")
-            .split("\n")
-            .map((line) => line.trim())
-            .find((line) => line.length > 0)
-          if (!cleaned) return
 
-          const title = cleaned.length > 100 ? cleaned.substring(0, 97) + "..." : cleaned
-          draft.title = title
-        },
-        { touch: false },
-      )
+    const text = await result.text.catch((err) => {
+      log.error("failed to generate title", { error: err })
+      return undefined
+    })
+    if (!text) return
+
+    const cleaned = text
+      .replace(/<think>[\s\S]*?<\/think>\s*/g, "")
+      .split("\n")
+      .map((line) => line.trim())
+      .find((line) => line.length > 0)
+    if (!cleaned) return
+
+    const title = cleaned.length > 100 ? cleaned.substring(0, 97) + "..." : cleaned
+
+    await Session.update(input.sessionID, (draft) => {
+      draft.title = title
+    }, { touch: false })
+
+    return title
   }
 }
