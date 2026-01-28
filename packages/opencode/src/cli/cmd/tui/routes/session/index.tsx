@@ -1384,7 +1384,7 @@ function ReasoningPart(props: { last: boolean; part: ReasoningPart; message: Ass
     // OpenRouter sends encrypted reasoning data that appears as [REDACTED]
     const text = props.part.text.replace("[REDACTED]", "").trim()
     if (ctx.messageFlow() === "down") {
-      return text.split("\n").reverse().join("\n")
+      return reverseTextPreservingCodeBlocks(text)
     }
     return text
   })
@@ -1413,13 +1413,46 @@ function ReasoningPart(props: { last: boolean; part: ReasoningPart; message: Ass
   )
 }
 
+function reverseTextPreservingCodeBlocks(text: string): string {
+  const lines = text.split("\n")
+  const result: string[] = []
+  const codeBlockStack: string[][] = []
+  let inCodeBlock = false
+  
+  for (let i = lines.length - 1; i >= 0; i--) {
+    const line = lines[i]
+    
+    if (line.trim().startsWith("```")) {
+      if (inCodeBlock) {
+        // End of code block (when reading backwards) - push the closing fence
+        codeBlockStack[codeBlockStack.length - 1].unshift(line)
+        // Flush the code block in correct order
+        result.push(...codeBlockStack.pop()!)
+        inCodeBlock = false
+      } else {
+        // Start of code block (when reading backwards) - begin collecting
+        codeBlockStack.push([line])
+        inCodeBlock = true
+      }
+    } else if (inCodeBlock) {
+      // Collect code block lines in original order
+      codeBlockStack[codeBlockStack.length - 1].unshift(line)
+    } else {
+      // Regular text - add reversed
+      result.push(line)
+    }
+  }
+  
+  return result.join("\n")
+}
+
 function TextPart(props: { last: boolean; part: TextPart; message: AssistantMessage }) {
   const ctx = use()
   const { theme, syntax } = useTheme()
   const content = createMemo(() => {
     const text = props.part.text.trim()
     if (ctx.messageFlow() === "down") {
-      return text.split("\n").reverse().join("\n")
+      return reverseTextPreservingCodeBlocks(text)
     }
     return text
   })
