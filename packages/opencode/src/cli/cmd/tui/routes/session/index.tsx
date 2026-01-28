@@ -1398,7 +1398,6 @@ function ReasoningPart(props: { last: boolean; part: ReasoningPart; message: Ass
         border={["left"]}
         customBorderChars={SplitBorder.customBorderChars}
         borderColor={theme.backgroundElement}
-        justifyContent={ctx.messageFlow() === "down" ? "flex-end" : undefined}
       >
         <code
           filetype="markdown"
@@ -1476,7 +1475,7 @@ function TextPart(props: { last: boolean; part: TextPart; message: AssistantMess
               drawUnstyledText={false}
               streaming={true}
               syntaxStyle={syntax()}
-              content={content()ß}
+              content={content()}
               conceal={ctx.conceal()}
               fg={theme.text}
             />
