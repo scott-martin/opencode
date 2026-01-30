@@ -1720,9 +1720,10 @@ function Bash(props: ToolProps<typeof BashTool>) {
   const output = createMemo(() => stripAnsi(props.metadata.output?.trim() ?? ""))
   const [expanded, setExpanded] = createSignal(false)
   const lines = createMemo(() => output().split("\n"))
-  const overflow = createMemo(() => lines().length > 10)
+  const overflow = createMemo(() => lines().length > 10 || output().length > 100)
   const limited = createMemo(() => {
     if (expanded() || !overflow()) return output()
+    if (lines().length <= 10) return output().slice(0, 100) + "…"
     return [...lines().slice(0, 10), "…"].join("\n")
   })
 
