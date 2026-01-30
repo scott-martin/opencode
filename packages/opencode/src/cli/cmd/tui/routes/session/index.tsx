@@ -282,7 +282,7 @@ export function Session() {
 
   function toLatest() {
     setTimeout(() => {
-      if (!scroll) return
+      if (!scroll || scroll.isDestroyed) return
       // When flow is "down", newest is at top and stickyStart="top" keeps it visible
       if (messageFlow() === "down") return
       scroll.scrollTo(scroll.scrollHeight)
@@ -1467,7 +1467,12 @@ function TextPart(props: { last: boolean; part: TextPart; message: AssistantMess
       >
         <Switch>
           <Match when={Flag.OPENCODE_EXPERIMENTAL_MARKDOWN}>
-            <markdown syntaxStyle={syntax()} content={props.part.text.trim()} conceal={ctx.conceal()} />
+            <markdown
+              syntaxStyle={syntax()}
+              streaming={true}
+              content={props.part.text.trim()}
+              conceal={ctx.conceal()}
+            />
           </Match>
           <Match when={!Flag.OPENCODE_EXPERIMENTAL_MARKDOWN}>
             <code
