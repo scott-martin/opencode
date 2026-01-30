@@ -19,7 +19,7 @@ import path from "path"
 import { type ToolContext as PluginToolContext, type ToolDefinition } from "@opencode-ai/plugin"
 import z from "zod"
 import { Plugin } from "../plugin"
-import { WebSearchTool } from "./websearch"
+// import { WebSearchTool } from "./websearch" // using custom explore tool instead
 import { CodeSearchTool } from "./codesearch"
 import { Flag } from "@/flag/flag"
 import { Log } from "@/util/log"
@@ -111,7 +111,7 @@ export namespace ToolRegistry {
       WebFetchTool,
       TodoWriteTool,
       TodoReadTool,
-      WebSearchTool,
+      // WebSearchTool, // using custom explore tool instead
       CodeSearchTool,
       SkillTool,
       ApplyPatchTool,
@@ -137,8 +137,8 @@ export namespace ToolRegistry {
     const result = await Promise.all(
       tools
         .filter((t) => {
-          // Enable websearch/codesearch for zen users OR via enable flag
-          if (t.id === "codesearch" || t.id === "websearch") {
+          // Enable codesearch for zen users OR via enable flag
+          if (t.id === "codesearch") {
             return model.providerID === "opencode" || Flag.OPENCODE_ENABLE_EXA
           }
 

@@ -1827,9 +1827,21 @@ NOTE: At any point in time through this workflow you should feel free to ask the
       messages: [
         {
           role: "user",
-          content: "Generate a title for this conversation:\n",
+          content: iife(() => {
+            const msgs = input.messages ?? MessageV2.toModelMessages(history, model)
+            const lines = msgs.map((m) => {
+              const content =
+                typeof m.content === "string"
+                  ? m.content
+                  : m.content
+                      ?.filter((p): p is { type: "text"; text: string } => p.type === "text")
+                      .map((p) => p.text)
+                      .join("\n") ?? ""
+              return `[${m.role}]: ${content}`
+            })
+            return `Generate a title for this conversation:\n<conversation>\n${lines.join("\n")}\n</conversation>`
+          }),
         },
-        ...(input.messages ?? MessageV2.toModelMessages(history, model)),
       ],
     })
 
