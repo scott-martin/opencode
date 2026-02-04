@@ -960,6 +960,30 @@ export function Session() {
             <Show when={!sidebarVisible() || !wide()}>
               <Header />
             </Show>
+            <box flexShrink={0}>
+              <Show when={permissions().length > 0}>
+                <PermissionPrompt request={permissions()[0]} />
+              </Show>
+              <Show when={permissions().length === 0 && questions().length > 0}>
+                <QuestionPrompt request={questions()[0]} />
+              </Show>
+              <Prompt
+                visible={!session()?.parentID && permissions().length === 0 && questions().length === 0}
+                ref={(r) => {
+                  prompt = r
+                  promptRef.set(r)
+                  // Apply initial prompt when prompt component mounts (e.g., from fork)
+                  if (route.initialPrompt) {
+                    r.set(route.initialPrompt)
+                  }
+                }}
+                disabled={permissions().length > 0 || questions().length > 0}
+                onSubmit={() => {
+                  toBottom()
+                }}
+                sessionID={route.sessionID}
+              />
+            </box>
             <scrollbox
               ref={(r) => (scroll = r)}
               viewportOptions={{
@@ -974,7 +998,7 @@ export function Session() {
                 },
               }}
               stickyScroll={true}
-              stickyStart="bottom"
+              stickyStart="top"
               flexGrow={1}
               scrollAcceleration={scrollAcceleration()}
             >
@@ -1074,30 +1098,6 @@ export function Session() {
                 )}
               </For>
             </scrollbox>
-            <box flexShrink={0}>
-              <Show when={permissions().length > 0}>
-                <PermissionPrompt request={permissions()[0]} />
-              </Show>
-              <Show when={permissions().length === 0 && questions().length > 0}>
-                <QuestionPrompt request={questions()[0]} />
-              </Show>
-              <Prompt
-                visible={!session()?.parentID && permissions().length === 0 && questions().length === 0}
-                ref={(r) => {
-                  prompt = r
-                  promptRef.set(r)
-                  // Apply initial prompt when prompt component mounts (e.g., from fork)
-                  if (route.initialPrompt) {
-                    r.set(route.initialPrompt)
-                  }
-                }}
-                disabled={permissions().length > 0 || questions().length > 0}
-                onSubmit={() => {
-                  toBottom()
-                }}
-                sessionID={route.sessionID}
-              />
-            </box>
           </Show>
           <Toast />
         </box>
